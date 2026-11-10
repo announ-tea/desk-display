@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Desk">
+<meta name="format-detection" content="telephone=no">
+<title>Desk Display</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    --bg:#0e1116; --panel:#171b22; --line:#262c36;
+    --text:#e8ecf2; --sub:#8b95a5; --accent:#4cc2ff; --warn:#ffb020; --bad:#ff5c5c;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);
+    font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;
+    overflow:hidden;-webkit-user-select:none;user-select:none}
+  /* 1024x768(iPad mini 4 横向き)を基準サイズにして、画面に合わせて拡大縮小する */
+  #app{display:-webkit-flex;display:flex;width:1024px;height:768px;padding:12px;
+    position:absolute;left:0;top:0;-webkit-transform-origin:0 0;transform-origin:0 0}
+  #rotate{display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:9999;background:var(--bg);
+    -webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;
+    text-align:center;font-size:26px;color:var(--sub);line-height:1.6}
+  #left{width:400px;-webkit-flex:none;flex:none;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+  #right{-webkit-flex:1;flex:1;margin-left:12px;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;min-width:0}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .label{font-size:12px;color:var(--sub);letter-spacing:.08em;margin-bottom:6px}
+
+  #clock{text-align:center;padding:18px 10px 14px}
+  #time{font-size:104px;font-weight:200;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  #time .sec{font-size:34px;color:var(--sub);margin-left:6px;letter-spacing:0}
+  #date{font-size:22px;color:var(--sub);margin-top:8px}
+
+  #weather{margin-top:12px;-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+  #now{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+  #nowIcon{font-size:62px;width:84px;text-align:center}
+  #nowTemp{font-size:58px;font-weight:300;line-height:1}
+  #nowTemp small{font-size:22px;color:var(--sub)}
+  #nowText{font-size:18px;margin-top:4px}
+  #nowSub{font-size:14px;color:var(--sub);margin-top:2px}
+  #hours{display:-webkit-flex;display:flex;margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .h{-webkit-flex:1;flex:1;text-align:center}
+  .h .t{font-size:13px;color:var(--sub)}
+  .h .i{font-size:24px;margin:3px 0}
+  .h .c{font-size:16px}
+  .h .p{font-size:12px;color:var(--accent)}
+  #days{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .d{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:4px 0;font-size:16px}
+  .d .n{width:64px;color:var(--sub)}
+  .d .i{width:36px;font-size:20px}
+  .d .p{width:56px;color:var(--accent);font-size:14px}
+  .d .r{-webkit-flex:1;flex:1;text-align:right}
+  .d .r .lo{color:var(--sub);margin-right:10px}
+
+  #radarBox{position:relative;-webkit-flex:1;flex:1;padding:0;overflow:hidden}
+  #map{position:absolute;top:0;left:0;right:0;bottom:0;background:#0b0d11}
+  #radarInfo{position:absolute;z-index:1000;left:10px;top:10px;background:rgba(14,17,22,.82);
+    border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:15px}
+  #radarInfo b{font-variant-numeric:tabular-nums}
+  #radarTag{margin-left:4px;color:var(--sub)}
+  #radarTag.fc{color:var(--warn);font-weight:600}
+  #fcBtn{margin-left:10px;padding:3px 10px;font-size:13px;color:var(--text);background:#232a35;
+    border:1px solid #3a4352;border-radius:8px;font-family:inherit}
+  #dots{margin-top:6px;height:8px;display:-webkit-flex;display:flex}
+  #dots i{display:block;width:14px;height:6px;margin-right:3px;border-radius:3px;background:#3a4352}
+  #dots i.fc{background:#6b5520}
+  #dots i.on{background:var(--accent)}
+  #dots i.fc.on{background:var(--warn)}
+  #fcNote{color:var(--warn);font-size:12px;margin-left:6px}
+  #legend{position:absolute;z-index:1000;right:10px;bottom:24px;background:rgba(14,17,22,.82);
+    border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:11px;color:var(--sub)}
+  #legend span{display:inline-block;width:14px;height:10px;margin-right:2px;vertical-align:middle}
+  .leaflet-control-attribution{font-size:9px!important;background:rgba(14,17,22,.75)!important;color:#9aa4b2!important}
+  .leaflet-control-attribution a{color:#9aa4b2!important}
+
+  #slots{display:-webkit-flex;display:flex;margin-top:12px;height:150px}
+  .slot{-webkit-flex:1;flex:1}
+  .slot + .slot{margin-left:12px}
+  .slot .ph{color:var(--sub);font-size:15px;margin-top:20px}
+  #status{position:absolute;right:16px;bottom:3px;font-size:10px;color:#4b5565}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="left">
+    <div id="clock" class="panel">
+      <div id="time">--:--<span class="sec">--</span></div>
+      <div id="date">&nbsp;</div>
+    </div>
+    <div id="weather" class="panel">
+      <div class="label">新宿区大久保の天気</div>
+      <div id="now">
+        <div id="nowIcon">–</div>
+        <div>
+          <div id="nowTemp">--<small>℃</small></div>
+          <div id="nowText">読み込み中…</div>
+          <div id="nowSub">&nbsp;</div>
+        </div>
+      </div>
+      <div id="hours"></div>
+      <div id="days"></div>
+    </div>
+  </div>
+  <div id="right">
+    <div id="radarBox" class="panel">
+      <div id="map"></div>
+      <div id="radarInfo">雨雲レーダー <b id="radarTime">--:--</b><span id="radarTag"></span>
+        <button id="fcBtn" type="button">予測 60分</button><span id="fcNote"></span>
+        <div id="dots"></div>
+      </div>
+      <div id="legend">
+        <span style="background:#f2f2ff"></span>1
+        <span style="background:#a0d2ff"></span>5
+        <span style="background:#2182ff"></span>10
+        <span style="background:#0041ff"></span>20
+        <span style="background:#ffd500"></span>30
+        <span style="background:#ff9900"></span>50
+        <span style="background:#ff2800"></span>80 mm/h
+      </div>
+    </div>
+    <div id="slots">
+      <div class="slot panel"><div class="label">西早稲田駅 渋谷方面</div><div class="ph">第3段階で追加</div></div>
+      <div class="slot panel"><div class="label">課題の提出期限(Moodle)</div><div class="ph">第2段階で追加</div></div>
+    </div>
+  </div>
+</div>
+<div id="status"></div>
+<div id="rotate"><div>📱 iPadを横向きにしてください<br><span style="font-size:16px">(コントロールセンターで回転ロックをオンにすると固定できます)</span></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  // ---- 設定値 ------------------------------------------------------------
+  // 新宿区大久保付近(大久保駅周辺)の緯度経度。天気予報はこの点の格子値になる。
+  var LAT = 35.7012, LON = 139.7002;
+  // 天気は10分ごと: 予報は1時間単位で更新されるため、これより短くしても情報が増えない
+  var WEATHER_INTERVAL = 10 * 60 * 1000;
+  // レーダーは5分ごと: 気象庁の降水ナウキャストの観測間隔が5分
+  var RADAR_INTERVAL = 5 * 60 * 1000;
+  // 1時間ごとに全体再読み込み: 2GB RAMの古い端末でメモリ増加を定期的にリセットするため
+  var FULL_RELOAD = 60 * 60 * 1000;
+  // 過去は10分刻みで4コマ(-30,-20,-10,0分)、予測は10分刻み(+10〜+60分)。
+  // 10分刻みにする理由: 5分刻みだとタイルが約2倍(最大19枚分)になり、2GB RAMの古い端末では重いため。
+  // 雲の動きは10分刻みでも十分追える。
+  var PAST_COUNT = 4, PAST_STEP = 2;  // 観測(N1)は5分間隔なので2つ飛ばし=10分
+  var FC_STEP_MIN = 10;               // 予測(N2)は5分間隔データから10分ごとに採用
+  var FRAME_MS = 700;                 // 1コマ0.7秒
+  var NOW_PAUSE = 2000;               // 「いま」のコマで長めに止める(いちばん見たい情報のため)
+  var END_PAUSE = 1500;               // 予測の最終コマでも少し止める
+  var FC_MAX_AGE_MIN = 20;            // 予測の起点が観測の最新より20分以上古ければ使わない(古い予測を出さないため)
+  var N1_URL = 'https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N1.json';
+  var N2_URL = 'https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N2.json';
+  var fcMin = 60;                     // 予測の先読み時間(30 or 60)。ボタンで切り替え
+  try { var sv = localStorage.getItem('fcMin'); if (sv === '30' || sv === '60') { fcMin = +sv; } } catch (e) {}
+
+  var WDAYS = ['日','月','火','水','木','金','土'];
+  function p2(n){ return (n < 10 ? '0' : '') + n; }
+
+  // ---- 時計 ---------------------------------------------------------------
+  function tick() {
+    var d = new Date();
+    document.getElementById('time').innerHTML =
+      p2(d.getHours()) + ':' + p2(d.getMinutes()) + '<span class="sec">' + p2(d.getSeconds()) + '</span>';
+    document.getElementById('date').textContent =
+      d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日(' + WDAYS[d.getDay()] + ')';
+  }
+  tick(); setInterval(tick, 1000);
+
+  // ---- 天気 ---------------------------------------------------------------
+  // WMO天気コード → [絵文字, 日本語]
+  function wx(code) {
+    var m = {
+      0:['☀️','快晴'],1:['🌤️','晴れ'],2:['⛅','薄曇り'],3:['☁️','曇り'],
+      45:['🌫️','霧'],48:['🌫️','霧氷'],
+      51:['🌦️','弱い霧雨'],53:['🌦️','霧雨'],55:['🌧️','強い霧雨'],
+      56:['🌧️','着氷性霧雨'],57:['🌧️','着氷性霧雨'],
+      61:['🌧️','小雨'],63:['🌧️','雨'],65:['🌧️','大雨'],
+      66:['🌧️','着氷性の雨'],67:['🌧️','着氷性の雨'],
+      71:['🌨️','小雪'],73:['🌨️','雪'],75:['❄️','大雪'],77:['🌨️','霧雪'],
+      80:['🌦️','にわか雨'],81:['🌧️','強いにわか雨'],82:['⛈️','激しいにわか雨'],
+      85:['🌨️','にわか雪'],86:['🌨️','強いにわか雪'],
+      95:['⛈️','雷雨'],96:['⛈️','雷雨(ひょう)'],99:['⛈️','激しい雷雨']
+    };
+    return m[code] || ['❔','不明'];
+  }
+
+  function loadWeather() {
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON +
+      '&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m' +
+      '&hourly=temperature_2m,precipitation_probability,weather_code' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&timezone=Asia%2FTokyo&forecast_days=3&wind_speed_unit=ms';
+    fetch(url).then(function (r) { return r.json(); }).then(function (j) {
+      var c = j.current, w = wx(c.weather_code);
+      document.getElementById('nowIcon').textContent = w[0];
+      document.getElementById('nowTemp').innerHTML = Math.round(c.temperature_2m) + '<small>℃</small>';
+      document.getElementById('nowText').textContent = w[1];
+      document.getElementById('nowSub').textContent =
+        '体感 ' + Math.round(c.apparent_temperature) + '℃ ・ 湿度 ' + c.relative_humidity_2m +
+        '% ・ 風 ' + Math.round(c.wind_speed_10m) + 'm/s';
+
+      // 今から先の3時間おき×5コマ
+      var h = j.hourly, now = new Date(), html = '', shown = 0, i, t;
+      for (i = 0; i < h.time.length && shown < 5; i++) {
+        t = new Date(h.time[i]);
+        if (t.getTime() < now.getTime() - 30 * 60 * 1000) continue;
+        if (shown === 0 || (t.getHours() % 3 === 0)) {
+          var hw = wx(h.weather_code[i]);
+          html += '<div class="h"><div class="t">' + t.getHours() + '時</div><div class="i">' + hw[0] +
+                  '</div><div class="c">' + Math.round(h.temperature_2m[i]) + '°</div><div class="p">' +
+                  (h.precipitation_probability[i] == null ? '-' : h.precipitation_probability[i] + '%') + '</div></div>';
+          shown++;
+        }
+      }
+      document.getElementById('hours').innerHTML = html;
+
+      var d = j.daily, dh = '', names = ['今日','明日','明後日'];
+      for (i = 0; i < d.time.length; i++) {
+        var dw = wx(d.weather_code[i]);
+        dh += '<div class="d"><div class="n">' + names[i] + '</div><div class="i">' + dw[0] +
+              '</div><div class="p">' + (d.precipitation_probability_max[i] == null ? '-' : d.precipitation_probability_max[i] + '%') +
+              '</div><div class="r"><span class="lo">' + Math.round(d.temperature_2m_min[i]) + '°</span>' +
+              Math.round(d.temperature_2m_max[i]) + '°</div></div>';
+      }
+      document.getElementById('days').innerHTML = dh;
+      stamp('天気 ' + p2(now.getHours()) + ':' + p2(now.getMinutes()));
+    }).catch(function () { stamp('天気取得失敗'); });
+  }
+  loadWeather(); setInterval(loadWeather, WEATHER_INTERVAL);
+
+  // ---- 雨雲レーダー -------------------------------------------------------
+  var map = L.map('map', { zoomControl: false, attributionControl: true, dragging: false,
+    touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false }).setView([LAT, LON], 10);
+  // 地図は国土地理院の淡色地図。レーダーの色が見やすい薄い背景のため
+  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+    maxZoom: 18, attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>'
+  }).addTo(map);
+  L.circleMarker([LAT, LON], { radius: 6, color: '#fff', weight: 2, fillColor: '#e5322d', fillOpacity: 1 }).addTo(map);
+  map.attributionControl.addAttribution('雨雲: <a href="https://www.jma.go.jp/">気象庁</a>');
+
+  var layers = [], specs = [], cur = 0, animTimer = null, lastN1 = null, lastN2 = null;
+
+  function toMs(s) { // 'YYYYMMDDHHMMSS'(UTC) → ミリ秒
+    return Date.UTC(+s.substr(0,4), +s.substr(4,2) - 1, +s.substr(6,2), +s.substr(8,2), +s.substr(10,2));
+  }
+  function jst(s) { // → JSTの'HH:MM'
+    var j = new Date(toMs(s) + 9 * 3600 * 1000);
+    return p2(j.getUTCHours()) + ':' + p2(j.getUTCMinutes());
+  }
+  function minDiff(a, b) { return Math.round((toMs(a) - toMs(b)) / 60000); }
+  function tileUrl(b, v) {
+    return 'https://www.jma.go.jp/bosai/jmatile/data/nowc/' + b + '/none/' + v + '/surf/hrpns/{z}/{x}/{y}.png';
+  }
+  function getJson(u) {
+    return fetch(u).then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); });
+  }
+
+  function loadRadar() {
+    var p1 = getJson(N1_URL);
+    var p2_ = getJson(N2_URL).catch(function () { return null; }); // 予測が取れなくても観測は出す
+    Promise.all([p1, p2_]).then(function (res) {
+      lastN1 = res[0]; lastN2 = res[1]; buildFrames();
+      var n = new Date(); stamp('レーダー ' + p2(n.getHours()) + ':' + p2(n.getMinutes()));
+    }).catch(function () { stamp('レーダー取得失敗'); });
+  }
+
+  function buildFrames() {
+    var i, e, m, note = '';
+    if (!lastN1 || !lastN1.length) { return; }
+    var latest = lastN1[0].basetime;            // N1は先頭が最新
+    specs = [];
+    for (i = PAST_COUNT - 1; i >= 0; i--) {     // 古い順に並べる
+      e = lastN1[i * PAST_STEP];
+      if (e) { specs.push({ b: e.basetime, v: e.validtime, fc: false, hold: 0 }); }
+    }
+    if (specs.length) { specs[specs.length - 1].hold = NOW_PAUSE; specs[specs.length - 1].tag = '(いま)'; }
+
+    if (lastN2 && lastN2.length) {
+      var maxB = '';
+      for (i = 0; i < lastN2.length; i++) { if (lastN2[i].basetime > maxB) { maxB = lastN2[i].basetime; } }
+      if (maxB && minDiff(latest, maxB) <= FC_MAX_AGE_MIN) {
+        for (m = FC_STEP_MIN; m <= fcMin; m += FC_STEP_MIN) {
+          for (i = 0; i < lastN2.length; i++) {
+            e = lastN2[i];
+            if (e.basetime === maxB && minDiff(e.validtime, maxB) === m) {
+              specs.push({ b: e.basetime, v: e.validtime, fc: true, hold: 0, tag: '+' + minDiff(e.validtime, latest) + '分の予測' });
+              break;
+            }
+          }
+        }
+        if (specs[specs.length - 1].fc) { specs[specs.length - 1].hold = END_PAUSE; }
+      } else { note = '予測は更新待ち'; }
+    } else { note = '予測を取得できません'; }
+    document.getElementById('fcNote').textContent = note;
+
+    if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+    for (i = 0; i < layers.length; i++) { map.removeLayer(layers[i]); }
+    layers = [];
+    var dots = '';
+    for (i = 0; i < specs.length; i++) {
+      var lyr = L.tileLayer(tileUrl(specs[i].b, specs[i].v), { opacity: 0, maxNativeZoom: 10, maxZoom: 18, zIndex: 10 + i });
+      lyr.addTo(map); layers.push(lyr);
+      dots += '<i class="' + (specs[i].fc ? 'fc' : '') + '"></i>';
+    }
+    document.getElementById('dots').innerHTML = dots;
+    cur = 0;
+    for (i = 0; i < specs.length; i++) { if (specs[i].tag === '(いま)') { cur = i; } }
+    show(cur); schedule();
+  }
+
+  function show(k) {
+    var i, d = document.getElementById('dots').children;
+    for (i = 0; i < layers.length; i++) {
+      layers[i].setOpacity(i === k ? 0.75 : 0);
+      if (d[i]) { d[i].className = (specs[i].fc ? 'fc' : '') + (i === k ? ' on' : ''); }
+    }
+    var tg = document.getElementById('radarTag');
+    document.getElementById('radarTime').textContent = specs[k] ? jst(specs[k].v) : '--:--';
+    tg.textContent = specs[k] && specs[k].tag ? specs[k].tag : '';
+    tg.className = specs[k] && specs[k].fc ? 'fc' : '';
+  }
+  function schedule() {
+    if (!layers.length) { return; }
+    animTimer = setTimeout(function () {
+      cur = (cur + 1) % layers.length; show(cur); schedule();
+    }, specs[cur].hold || FRAME_MS);
+  }
+
+  var btn = document.getElementById('fcBtn');
+  function btnLabel() { btn.textContent = '予測 ' + fcMin + '分'; }
+  btnLabel();
+  btn.addEventListener('click', function () {
+    fcMin = (fcMin === 60) ? 30 : 60;
+    try { localStorage.setItem('fcMin', String(fcMin)); } catch (e) {}
+    btnLabel(); buildFrames();
+  });
+  loadRadar(); setInterval(loadRadar, RADAR_INTERVAL);
+
+  // ---- 共通 ---------------------------------------------------------------
+  function stamp(s) { document.getElementById('status').textContent = s; }
+  setTimeout(function () { location.reload(); }, FULL_RELOAD);
+
+  // ---- 画面フィット(横向き固定レイアウトを拡大縮小。縦向きなら案内を出す) ------
+  function fit() {
+    var w = window.innerWidth, h = window.innerHeight, sc = Math.min(w / 1024, h / 768);
+    var app = document.getElementById('app');
+    app.style.transform = 'scale(' + sc + ')';
+    app.style.left = ((w - 1024 * sc) / 2) + 'px';
+    app.style.top = ((h - 768 * sc) / 2) + 'px';
+    document.getElementById('rotate').style.display = (h > w) ? 'flex' : 'none';
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
+  fit();
+})();
+</script>
+</body>
+</html>
