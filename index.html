@@ -29,12 +29,12 @@
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
   .label{font-size:12px;color:var(--sub);letter-spacing:.08em;margin-bottom:6px}
 
-  #clock{text-align:center;padding:18px 10px 14px}
-  #time{font-size:104px;font-weight:200;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  #clock{text-align:center;padding:12px 10px 10px}
+  #time{font-size:92px;font-weight:200;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   #time .sec{font-size:34px;color:var(--sub);margin-left:6px;letter-spacing:0}
   #date{font-size:22px;color:var(--sub);margin-top:8px}
 
-  #weather{margin-top:12px;-webkit-flex:1;flex:1;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+  #weather{margin-top:12px;-webkit-flex:none;flex:none}
   #now{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
   #nowIcon{font-size:62px;width:84px;text-align:center}
   #nowTemp{font-size:58px;font-weight:300;line-height:1}
@@ -48,14 +48,14 @@
   .h .c{font-size:16px}
   .h .p{font-size:12px;color:var(--accent)}
   #days{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
-  .d{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:4px 0;font-size:16px}
+  .d{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:3px 0;font-size:16px}
   .d .n{width:64px;color:var(--sub)}
   .d .i{width:36px;font-size:20px}
   .d .p{width:56px;color:var(--accent);font-size:14px}
   .d .r{-webkit-flex:1;flex:1;text-align:right}
   .d .r .lo{color:var(--sub);margin-right:10px}
 
-  #radarBox{position:relative;-webkit-flex:1;flex:1;padding:0;overflow:hidden}
+  #radarBox{position:relative;-webkit-flex:none;flex:none;height:270px;padding:0;overflow:hidden}
   #map{position:absolute;top:0;left:0;right:0;bottom:0;background:#0b0d11}
   #radarInfo{position:absolute;z-index:1000;left:10px;top:10px;background:rgba(14,17,22,.82);
     border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:15px}
@@ -64,7 +64,7 @@
   #radarTag.fc{color:var(--warn);font-weight:600}
   #fcBtn{margin-left:10px;padding:3px 10px;font-size:13px;color:var(--text);background:#232a35;
     border:1px solid #3a4352;border-radius:8px;font-family:inherit}
-  #dots{margin-top:6px;height:8px;display:-webkit-flex;display:flex}
+  #dots{position:absolute;z-index:1000;left:10px;bottom:10px;height:8px;display:-webkit-flex;display:flex}
   #dots i{display:block;width:14px;height:6px;margin-right:3px;border-radius:3px;background:#3a4352}
   #dots i.fc{background:#6b5520}
   #dots i.on{background:var(--accent)}
@@ -76,22 +76,37 @@
   .leaflet-control-attribution{font-size:9px!important;background:rgba(14,17,22,.75)!important;color:#9aa4b2!important}
   .leaflet-control-attribution a{color:#9aa4b2!important}
 
-  #slots{display:-webkit-flex;display:flex;margin-top:12px;height:176px}
-  #trainSlot{-webkit-flex:3 1 0;flex:3 1 0;min-width:0}
-  #moodleSlot{-webkit-flex:2 1 0;flex:2 1 0;min-width:0}
+  /* 電車パネル(右下、大きめ) */
+  #trainPanel{margin-top:12px;-webkit-flex:1;flex:1;min-height:0;overflow:hidden}
   #trStatus{margin-left:8px;color:var(--warn);letter-spacing:0}
   #trStatus.bad{color:var(--bad)}
-  #trMain{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;white-space:nowrap}
-  #trCount{font-size:44px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums}
-  #trCount small{font-size:18px;color:var(--sub);margin:0 6px 0 2px}
-  #trMode{font-size:13px;margin-left:10px;padding-bottom:6px}
-  #trInfo{font-size:14px;margin-top:6px;white-space:nowrap;overflow:hidden}
-  #trNext{margin-top:6px;border-top:1px solid var(--line);padding-top:5px;font-size:13px;color:var(--sub)}
-  #trNext div{white-space:nowrap;overflow:hidden;line-height:1.6}
+  #trMain{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;white-space:nowrap;margin-top:2px}
+  #trCount{font-size:104px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums}
+  #trCount small{font-size:30px;color:var(--sub);margin:0 10px 0 4px}
+  #trMode{font-size:16px;padding-bottom:12px;margin-left:6px}
+  #trInfo{font-size:24px;margin-top:10px;white-space:nowrap;overflow:hidden}
+  #trLeave{display:-webkit-flex;display:flex;margin-top:10px}
+  .lv{-webkit-flex:1;flex:1;background:#1d232c;border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:0}
+  .lv + .lv{margin-left:10px}
+  .lv .k{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden}
+  .lv .v{font-size:34px;font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap}
+  #trNext{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;font-size:18px;color:var(--sub)}
+  #trNext div{white-space:nowrap;overflow:hidden;line-height:1.75}
   .ok{color:#5fd68a}.warn{color:var(--warn)}.bad{color:var(--bad)}.dim{color:var(--sub)}
-  .slot{-webkit-flex:1;flex:1}
-  .slot + .slot{margin-left:12px}
-  .slot .ph{color:var(--sub);font-size:15px;margin-top:20px}
+
+  /* 在線状況パネル(左下、天気の下) */
+  #linePanel{margin-top:12px;-webkit-flex:1;flex:1;min-height:0;overflow:hidden}
+  #lnDemo{margin-left:8px;color:var(--warn);letter-spacing:0}
+  #lnDiagram{position:relative;height:84px;margin-top:4px}
+  #lnLine{position:absolute;left:8%;right:8%;top:42px;height:3px;background:#3a4352;border-radius:2px}
+  .lnSt{position:absolute;top:36px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#171b22;border:3px solid #6b7686}
+  .lnSt.me{border-color:var(--accent);background:var(--accent)}
+  .lnNm{position:absolute;top:56px;width:70px;margin-left:-35px;text-align:center;font-size:11px;color:var(--sub)}
+  .lnNm.me{color:var(--text);font-weight:600}
+  .lnTr{position:absolute;top:22px;width:22px;height:11px;margin-left:-11px;border-radius:4px;background:#5fd68a}
+  .lnTr.warn{background:var(--warn)}.lnTr.bad{background:var(--bad)}.lnTr.dim{background:#6b7686}
+  .lnDl{position:absolute;top:3px;width:48px;margin-left:-24px;text-align:center;font-size:12px}
+  #lnInfo{margin-top:2px;font-size:14px;white-space:nowrap;overflow:hidden}
   #status{position:absolute;right:16px;bottom:3px;font-size:10px;color:#4b5565}
 </style>
 </head>
@@ -115,14 +130,19 @@
       <div id="hours"></div>
       <div id="days"></div>
     </div>
+    <div class="panel" id="linePanel">
+      <div class="label">副都心線 在線状況(渋谷方面行き)<span id="lnDemo"></span></div>
+      <div id="lnDiagram"></div>
+      <div id="lnInfo"></div>
+    </div>
   </div>
   <div id="right">
     <div id="radarBox" class="panel">
       <div id="map"></div>
       <div id="radarInfo">雨雲レーダー <b id="radarTime">--:--</b><span id="radarTag"></span>
         <button id="fcBtn" type="button">予測 60分</button><span id="fcNote"></span>
-        <div id="dots"></div>
       </div>
+      <div id="dots"></div>
       <div id="legend">
         <span style="background:#f2f2ff"></span>1
         <span style="background:#a0d2ff"></span>5
@@ -133,14 +153,12 @@
         <span style="background:#ff2800"></span>80 mm/h
       </div>
     </div>
-    <div id="slots">
-      <div class="slot panel" id="trainSlot">
-        <div class="label">西早稲田駅 渋谷方面<span id="trStatus"></span></div>
-        <div id="trMain"><div id="trCount">--</div><div id="trMode"></div></div>
-        <div id="trInfo">読み込み中…</div>
-        <div id="trNext"></div>
-      </div>
-      <div class="slot panel" id="moodleSlot"><div class="label">課題の提出期限(Moodle)</div><div class="ph">あとで追加</div></div>
+    <div class="panel" id="trainPanel">
+      <div class="label">西早稲田駅 渋谷方面<span id="trStatus"></span></div>
+      <div id="trMain"><div id="trCount">--</div><div id="trMode"></div></div>
+      <div id="trInfo">読み込み中…</div>
+      <div id="trLeave"></div>
+      <div id="trNext"></div>
     </div>
   </div>
 </div>
@@ -153,6 +171,10 @@
   // ---- 設定値 ------------------------------------------------------------
   // 新宿区大久保付近(大久保駅周辺)の緯度経度。天気予報はこの点の格子値になる。
   var LAT = 35.7012, LON = 139.7002;
+  // レーダーの拡大率。10なら約71km幅、10.5なら約50km幅、11なら約36km幅(横588px時)。
+  // 10.5の理由: 雨雲は1時間で30〜50kmほど動くことがあり、予測60分分を見るには片側25km程度は欲しいため。
+  // 狭くしたければ11、広くしたければ10にする。気象庁タイルの元データは拡大率10までなので、それより上は拡大表示になる。
+  var RADAR_ZOOM = 10.5;
   // 天気は10分ごと: 予報は1時間単位で更新されるため、これより短くしても情報が増えない
   var WEATHER_INTERVAL = 10 * 60 * 1000;
   // レーダーは5分ごと: 気象庁の降水ナウキャストの観測間隔が5分
@@ -248,10 +270,191 @@
   }
   loadWeather(); setInterval(loadWeather, WEATHER_INTERVAL);
 
-  // ---- 雨雲レーダー -------------------------------------------------------
+  // ---- 電車(西早稲田駅 渋谷方面) -----------------------------------------
+  // 中継サーバー(Cloudflare Worker)のURL。空欄の間はデモデータを表示する(実データではない)。
+  var TRAIN_API = '';
+  // 30秒ごと: 列車位置は分単位で変わるので十分細かく、Workers無料枠(1日10万回)にも収まる(1日2,880回)
+  var TRAIN_INTERVAL = 30 * 1000;
+  // 研究室から駅(ホーム)までの歩行時間。利用者の申告(2026-11-10更新): 急ぎ7分、ゆっくり10分。
+  var WALK_FAST = 7;      // 分。急いで歩く場合
+  var WALK_SLOW = 10;     // 分。ゆっくり歩く場合
+  var MARGIN_DEFAULT = 2; // 分。車両数が不明な列車は、申告の1〜2分のうち大きい側(安全側)
+  var MARGIN_BY_CARS = { 8: 1, 10: 2 }; // 分。★仮置き。8両/10両のどちらが長く必要か、実際に合わせて直す
+  // 行き先・種別・「直通先での種別(via)」から車両数を判定する表。上から順に、最初に一致したものを採用。空欄の項目は問わない。
+  // via は駅探(東京メトロ・東急の時刻表を載せたサイト)の凡例にある表記: 東急線内各停 / 東急線内急行 / 東急線内通勤特急 /
+  //   東急線内急行・相鉄線内特急 / 東急線内急行・相鉄線内各停。
+  // 根拠: ①相鉄線方面は10両、東横線内で特急になるものは10両、東横線内で各停は8両(利用者の申告 2026-11-10)。
+  //       ②「通勤特急」は特急の一種なので10両と推定(未確認)。 ③「東急線内急行」は申告がなく不明なので登録しない。
+  // ※ 10両の余裕(2分)は「両数不明」の既定値(2分)と同じなので、挙動が変わるのは8両(余裕1分)だけ。
+  var CAR_RULES = [
+    { dest: '湘南台', cars: 10 }, { dest: '海老名', cars: 10 }, { dest: '西谷', cars: 10 },
+    { via: '相鉄線内', cars: 10 },
+    { via: '東急線内各停', cars: 8 },
+    { via: '東急線内通勤特急', cars: 10 }
+  ];
+  var STALE_SEC = 180;    // 3分以上更新がなければ「データが古い」と表示(30秒間隔の6回分失敗した状態)
+  var demo = false, trData = null;
+  try { if (!TRAIN_API || location.search.indexOf('mock=1') >= 0) { demo = true; } } catch (e) { demo = !TRAIN_API; }
+
+  function carsFor(t) {
+    var i, r;
+    for (i = 0; i < CAR_RULES.length; i++) {
+      r = CAR_RULES[i];
+      if (r.dest && String(t.dest).indexOf(r.dest) < 0) { continue; }
+      if (r.type && String(t.type).indexOf(r.type) < 0) { continue; }
+      if (r.via && String(t.via || '').indexOf(r.via) < 0) { continue; }
+      return r.cars;
+    }
+    return null;
+  }
+  function carTag(t) { var c = carsFor(t); return c ? c + '両' : '両数不明'; }
+  function marginFor(t) { var c = carsFor(t); return (c && MARGIN_BY_CARS[c] != null) ? MARGIN_BY_CARS[c] : MARGIN_DEFAULT; }
+
+  // デモ用: 約5.5分間隔の架空の列車(実際の時刻表にある 種別×行き先 の組み合わせを回して、表示と車両数判定を試せるようにする)
+  var MOCK_COMBOS = [
+    { type: '各停', dest: '元町・中華街', via: '東急線内各停' },
+    { type: '急行', dest: '元町・中華街', via: '東急線内急行' },
+    { type: '各停', dest: '湘南台', via: '東急線内急行・相鉄線内各停' },
+    { type: '通勤特急', dest: '元町・中華街', via: '東急線内通勤特急' },
+    { type: '各停', dest: '武蔵小杉', via: '東急線内各停' }
+  ];
+  function mockData() {
+    var now = Date.now(), base = Math.ceil(now / 60000) * 60000 + 2 * 60000, out = [], k, dep, c;
+    for (k = 0; k < 10; k++) {
+      dep = Math.round((base + k * 5.5 * 60000) / 60000) * 60000; c = MOCK_COMBOS[k % MOCK_COMBOS.length];
+      out.push({ depMs: dep, delaySec: (k === 1 ? null : (k % 3) * 60), type: c.type, dest: c.dest, via: c.via });
+    }
+    var pos = [ { from: 'F10', to: 'F11', delaySec: 60 }, { from: 'F08', to: null, delaySec: 0 },
+                { from: 'F06', to: 'F07', delaySec: null } ];
+    return { fetchedAtMs: now, status: 'ok', statusText: '', trains: out, positions: pos };
+  }
+
+  function loadTrains() {
+    if (demo) { trData = mockData(); return; }
+    fetch(TRAIN_API).then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+      .then(function (j) {
+        var t = [], i;
+        for (i = 0; i < j.trains.length; i++) {
+          t.push({ depMs: Date.parse(j.trains[i].dep), delaySec: j.trains[i].delaySec,
+                   type: j.trains[i].type, dest: j.trains[i].dest, via: j.trains[i].via || '' });
+        }
+        trData = { fetchedAtMs: Date.now(), status: j.status, statusText: j.statusText || '', trains: t, positions: j.positions || [] };
+      }).catch(function () { stamp('電車データ取得失敗'); });
+  }
+
+  function hhmm(ms) { var d = new Date(ms); return p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+  function mmss(ms) { return Math.floor(ms / 60000) + '<small>分</small>' + p2(Math.floor((ms % 60000) / 1000)) + '<small>秒</small>'; }
+  function delayText(t) {
+    if (t.delaySec == null) { return '<span class="dim">遅延情報なし</span>'; }
+    var m = Math.round(t.delaySec / 60);
+    return m > 0 ? '<span class="warn">+' + m + '分遅れ</span>' : '<span class="ok">定刻</span>';
+  }
+
+  // 在線状況: 小竹向原〜西早稲田の6駅。池袋側から西早稲田へ向かってくる渋谷方面行きの列車だけを描く。
+  // 駅コードは副都心線の F06〜F11(私の記憶に基づく。実データで確認する)。
+  var STATIONS = [['F06','小竹向原'],['F07','千川'],['F08','要町'],['F09','池袋'],['F10','雑司が谷'],['F11','西早稲田']];
+  function stIdx(code) { for (var i = 0; i < STATIONS.length; i++) { if (STATIONS[i][0] === code) { return i; } } return -1; }
+
+  function renderLine(d) {
+    var n = STATIONS.length - 1, html = '<div id="lnLine"></div>', i, p, a, b, x, cls, cnt = 0, me;
+    function pos(v) { return (8 + v * 84 / n).toFixed(2) + '%'; }
+    for (i = 0; i <= n; i++) {
+      me = (i === n) ? ' me' : '';
+      html += '<div class="lnSt' + me + '" style="left:' + pos(i) + '"></div>' +
+              '<div class="lnNm' + me + '" style="left:' + pos(i) + '">' + STATIONS[i][1] + '</div>';
+    }
+    var ps = d.positions || [];
+    for (i = 0; i < ps.length; i++) {
+      p = ps[i]; a = stIdx(p.from);
+      if (a < 0) { continue; }
+      if (p.to) { b = stIdx(p.to); if (b !== a + 1) { continue; } x = a + 0.5; } else { x = a; }
+      // 色: 遅延情報なし=灰、5分以上=赤、2分以上=橙、それ以外=緑(2分は「遅れ」と感じ始める目安として設定)
+      cls = (p.delaySec == null) ? 'dim' : (p.delaySec >= 300 ? 'bad' : (p.delaySec >= 120 ? 'warn' : ''));
+      html += '<div class="lnTr ' + cls + '" style="left:' + pos(x) + '"></div>';
+      if (p.delaySec != null && p.delaySec >= 60) {
+        html += '<div class="lnDl ' + cls + '" style="left:' + pos(x) + '">+' + Math.round(p.delaySec / 60) + '分</div>';
+      }
+      cnt++;
+    }
+    document.getElementById('lnDiagram').innerHTML = html;
+    document.getElementById('lnDemo').textContent = demo ? ' デモ' : '';
+    var info;
+    if (d.status === 'suspended') { info = '<span class="bad">' + d.statusText + '</span>'; }
+    else if (d.status === 'delay') { info = '<span class="warn">' + (d.statusText || '遅延が発生しています') + '</span>'; }
+    else { info = '<span class="ok">平常運転</span>' + (d.statusText ? ' <span class="dim">' + d.statusText + '</span>' : ''); }
+    document.getElementById('lnInfo').innerHTML = info + ' <span class="dim">/ 西早稲田へ向かう列車 ' + cnt + '本</span>';
+  }
+
+  function leaveBox(title, ms, now, cls) {
+    var past = ms <= now;
+    return '<div class="lv"><div class="k">' + title + '</div><div class="v ' + (past ? 'dim' : cls) + '">' +
+           (past ? '過ぎた' : hhmm(Math.floor(ms / 60000) * 60000) + ' <span style="font-size:16px">に出る</span>') + '</div></div>';
+  }
+
+  function renderTrain() {
+    var now = Date.now(), el = function (id) { return document.getElementById(id); };
+    var st = el('trStatus'), i, list = [], t, rd, m, d = trData;
+    if (!d) { el('trInfo').textContent = '読み込み中…'; return; }
+    renderLine(d);
+    st.className = ''; st.textContent = demo ? ' デモデータ(実データではありません)' : '';
+    var age = (now - d.fetchedAtMs) / 1000;
+    if (!demo && age > STALE_SEC) { st.className = 'bad'; st.textContent = ' ⚠ データが古い(' + Math.floor(age / 60) + '分前)'; }
+    if (d.status === 'suspended') {
+      st.className = 'bad'; st.textContent = ' 運行情報あり';
+      el('trCount').textContent = '--'; el('trMode').textContent = '';
+      el('trInfo').innerHTML = '<span class="bad">' + d.statusText + '</span>'; el('trLeave').innerHTML = ''; el('trNext').innerHTML = ''; return;
+    }
+    for (i = 0; i < d.trains.length; i++) {
+      t = d.trains[i]; rd = t.depMs + (t.delaySec || 0) * 1000; m = marginFor(t);
+      var lf = rd - (WALK_FAST + m) * 60000, ls = rd - (WALK_SLOW + m) * 60000;
+      if (lf <= now) { continue; }              // 急いでも間に合わない電車は表示しない
+      list.push({ t: t, rd: rd, lf: lf, ls: ls, m: m });
+      if (list.length >= 5) { break; }          // 大きく1本+その次の4本
+    }
+    if (!list.length) {
+      el('trCount').textContent = '--'; el('trMode').textContent = '';
+      el('trInfo').textContent = '間に合う電車がありません'; el('trLeave').innerHTML = ''; el('trNext').innerHTML = ''; return;
+    }
+    var a = list[0], slowOk = a.ls > now, rem = slowOk ? a.ls - now : a.lf - now;
+    var cls = !slowOk ? 'bad' : (rem <= 3 * 60000 ? 'warn' : 'ok');
+    el('trCount').className = cls; el('trCount').innerHTML = mmss(rem);
+    el('trMode').className = cls; el('trMode').textContent = slowOk ? 'で出発(ゆっくり歩いて間に合う)' : 'で出発(急げば間に合う)';
+    el('trInfo').innerHTML = hhmm(a.rd) + '発 ' + a.t.type + ' ' + a.t.dest + '行き ' + delayText(a.t);
+    el('trLeave').innerHTML =
+      leaveBox('ゆっくり(歩き' + WALK_SLOW + '分+余裕' + a.m + '分・' + carTag(a.t) + ')', a.ls, now, 'ok') +
+      leaveBox('急ぎ(歩き' + WALK_FAST + '分+余裕' + a.m + '分・' + carTag(a.t) + ')', a.lf, now, 'warn');
+    var nx = '';
+    for (i = 1; i < list.length; i++) {
+      nx += '<div>' + hhmm(list[i].rd) + '発 ' + list[i].t.type + ' ' + list[i].t.dest + ' ' + delayText(list[i].t) +
+            ' <span class="dim">/ ゆっくり' + hhmm(Math.floor(list[i].ls / 60000) * 60000) + 'に出る</span></div>';
+    }
+    el('trNext').innerHTML = nx;
+  }
+  loadTrains(); renderTrain();
+  setInterval(loadTrains, TRAIN_INTERVAL);
+  setInterval(renderTrain, 1000);
+
+  // ---- 共通 ---------------------------------------------------------------
+  function stamp(s) { document.getElementById('status').textContent = s; }
+  setTimeout(function () { location.reload(); }, FULL_RELOAD);
+
+  // ---- 画面フィット(横向き固定レイアウトを拡大縮小。縦向きなら案内を出す) ------
+  function fit() {
+    var w = window.innerWidth, h = window.innerHeight, sc = Math.min(w / 1024, h / 768);
+    var app = document.getElementById('app');
+    app.style.transform = 'scale(' + sc + ')';
+    app.style.left = ((w - 1024 * sc) / 2) + 'px';
+    app.style.top = ((h - 768 * sc) / 2) + 'px';
+    document.getElementById('rotate').style.display = (h > w) ? 'flex' : 'none';
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
+  fit();
+
+  // ---- 雨雲レーダー(最後に初期化: 地図ライブラリが読み込めなくても他の表示は動かすため) ----
   var map = L.map('map', { zoomControl: false, attributionControl: true, dragging: false,
     touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false,
-    tap: false }).setView([LAT, LON], 10);
+    tap: false, zoomSnap: 0.5 }).setView([LAT, LON], RADAR_ZOOM);
   // 地図は国土地理院の淡色地図。レーダーの色が見やすい薄い背景のため
   L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
     maxZoom: 18, attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>'
@@ -357,123 +560,6 @@
   });
   loadRadar(); setInterval(loadRadar, RADAR_INTERVAL);
 
-  // ---- 電車(西早稲田駅 渋谷方面) -----------------------------------------
-  // 中継サーバー(Cloudflare Worker)のURL。空欄の間はデモデータを表示する(実データではない)。
-  var TRAIN_API = '';
-  // 30秒ごと: 列車位置は分単位で変わるので十分細かく、Workers無料枠(1日10万回)にも収まる(1日2,880回)
-  var TRAIN_INTERVAL = 30 * 1000;
-  var WALK_FAST = 3;      // 分。急いで歩く場合(実測の申告値)
-  var WALK_SLOW = 6;      // 分。ゆっくり歩く場合。申告の5〜6分のうち上限側を採用(乗り遅れ防止のため)
-  var MARGIN_DEFAULT = 2; // 分。車両数が不明な列車は、申告の1〜2分のうち大きい側(安全側)
-  var MARGIN_BY_CARS = { 8: 1, 10: 2 }; // 分。★仮置き。8両/10両のどちらが長く必要か、実際に合わせて直す
-  // 行き先・種別から車両数を判定する表。上から順に、最初に一致したものを採用。
-  // 例: { dest: '元町・中華街', type: '', cars: 10 }  (type が空欄なら種別は問わない)
-  var CAR_RULES = [];
-  var STALE_SEC = 180;    // 3分以上更新がなければ「データが古い」と表示(30秒間隔の6回分失敗した状態)
-  var demo = false, trData = null;
-  try { if (!TRAIN_API || location.search.indexOf('mock=1') >= 0) { demo = true; } } catch (e) { demo = !TRAIN_API; }
-
-  function carsFor(t) {
-    var i, r;
-    for (i = 0; i < CAR_RULES.length; i++) {
-      r = CAR_RULES[i];
-      if (r.dest && String(t.dest).indexOf(r.dest) < 0) { continue; }
-      if (r.type && String(t.type).indexOf(r.type) < 0) { continue; }
-      return r.cars;
-    }
-    return null;
-  }
-  function marginFor(t) { var c = carsFor(t); return (c && MARGIN_BY_CARS[c] != null) ? MARGIN_BY_CARS[c] : MARGIN_DEFAULT; }
-
-  // デモ用: 約5.5分間隔の架空の列車(遅延・遅延情報なし・種別違いを混ぜて表示を試せるようにする)
-  function mockData() {
-    var now = Date.now(), base = Math.ceil(now / 60000) * 60000 + 2 * 60000, out = [], k, dep;
-    for (k = 0; k < 10; k++) {
-      dep = Math.round((base + k * 5.5 * 60000) / 60000) * 60000;
-      out.push({ depMs: dep, delaySec: (k === 1 ? null : (k % 3) * 60), type: (k % 2 ? '急行' : '各停'),
-                 dest: (k % 2 ? '元町・中華街' : '渋谷') });
-    }
-    return { fetchedAtMs: now, status: 'ok', statusText: '', trains: out };
-  }
-
-  function loadTrains() {
-    if (demo) { trData = mockData(); return; }
-    fetch(TRAIN_API).then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
-      .then(function (j) {
-        var t = [], i;
-        for (i = 0; i < j.trains.length; i++) {
-          t.push({ depMs: Date.parse(j.trains[i].dep), delaySec: j.trains[i].delaySec,
-                   type: j.trains[i].type, dest: j.trains[i].dest });
-        }
-        trData = { fetchedAtMs: Date.now(), status: j.status, statusText: j.statusText || '', trains: t };
-      }).catch(function () { stamp('電車データ取得失敗'); });
-  }
-
-  function hhmm(ms) { var d = new Date(ms); return p2(d.getHours()) + ':' + p2(d.getMinutes()); }
-  function mmss(ms) { return Math.floor(ms / 60000) + '<small>分</small>' + p2(Math.floor((ms % 60000) / 1000)) + '<small>秒</small>'; }
-  function delayText(t) {
-    if (t.delaySec == null) { return '<span class="dim">遅延情報なし</span>'; }
-    var m = Math.round(t.delaySec / 60);
-    return m > 0 ? '<span class="warn">+' + m + '分遅れ</span>' : '<span class="ok">定刻</span>';
-  }
-
-  function renderTrain() {
-    var now = Date.now(), el = function (id) { return document.getElementById(id); };
-    var st = el('trStatus'), i, list = [], t, rd, m, d = trData;
-    if (!d) { el('trInfo').textContent = '読み込み中…'; return; }
-    st.className = ''; st.textContent = demo ? ' デモデータ(実データではありません)' : '';
-    var age = (now - d.fetchedAtMs) / 1000;
-    if (!demo && age > STALE_SEC) { st.className = 'bad'; st.textContent = ' ⚠ データが古い(' + Math.floor(age / 60) + '分前)'; }
-    if (d.status === 'suspended') {
-      st.className = 'bad'; st.textContent = ' 運行情報あり';
-      el('trCount').textContent = '--'; el('trMode').textContent = '';
-      el('trInfo').innerHTML = '<span class="bad">' + d.statusText + '</span>'; el('trNext').innerHTML = ''; return;
-    }
-    for (i = 0; i < d.trains.length; i++) {
-      t = d.trains[i]; rd = t.depMs + (t.delaySec || 0) * 1000; m = marginFor(t);
-      var lf = rd - (WALK_FAST + m) * 60000, ls = rd - (WALK_SLOW + m) * 60000;
-      if (lf <= now) { continue; }              // 急いでも間に合わない電車は表示しない
-      list.push({ t: t, rd: rd, lf: lf, ls: ls });
-      if (list.length >= 3) { break; }
-    }
-    if (!list.length) {
-      el('trCount').textContent = '--'; el('trMode').textContent = '';
-      el('trInfo').textContent = '間に合う電車がありません'; el('trNext').innerHTML = ''; return;
-    }
-    var a = list[0], slowOk = a.ls > now, rem = slowOk ? a.ls - now : a.lf - now;
-    var cls = !slowOk ? 'bad' : (rem <= 3 * 60000 ? 'warn' : 'ok');
-    el('trCount').className = cls; el('trCount').innerHTML = mmss(rem);
-    el('trMode').className = cls; el('trMode').textContent = slowOk ? 'で出発(ゆっくり歩いて間に合う)' : 'で出発(急げば間に合う)';
-    el('trInfo').innerHTML = hhmm(a.rd) + '発 ' + a.t.type + ' ' + a.t.dest + '行き ' + delayText(a.t) +
-      ' <span class="dim">/ 研究室を ゆっくり' + hhmm(Math.floor(a.ls / 60000) * 60000) +
-      ' ・ 急ぎ' + hhmm(Math.floor(a.lf / 60000) * 60000) + ' に出る</span>';
-    var nx = '';
-    for (i = 1; i < list.length; i++) {
-      nx += '<div>' + hhmm(list[i].rd) + '発 ' + list[i].t.type + ' ' + list[i].t.dest + ' ' + delayText(list[i].t) +
-            ' <span class="dim">/ ゆっくり' + hhmm(Math.floor(list[i].ls / 60000) * 60000) + 'に出る</span></div>';
-    }
-    el('trNext').innerHTML = nx;
-  }
-  loadTrains(); renderTrain();
-  setInterval(loadTrains, TRAIN_INTERVAL);
-  setInterval(renderTrain, 1000);
-
-  // ---- 共通 ---------------------------------------------------------------
-  function stamp(s) { document.getElementById('status').textContent = s; }
-  setTimeout(function () { location.reload(); }, FULL_RELOAD);
-
-  // ---- 画面フィット(横向き固定レイアウトを拡大縮小。縦向きなら案内を出す) ------
-  function fit() {
-    var w = window.innerWidth, h = window.innerHeight, sc = Math.min(w / 1024, h / 768);
-    var app = document.getElementById('app');
-    app.style.transform = 'scale(' + sc + ')';
-    app.style.left = ((w - 1024 * sc) / 2) + 'px';
-    app.style.top = ((h - 768 * sc) / 2) + 'px';
-    document.getElementById('rotate').style.display = (h > w) ? 'flex' : 'none';
-  }
-  window.addEventListener('resize', fit);
-  window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
-  fit();
 })();
 </script>
 </body>
