@@ -293,11 +293,14 @@
     { via: '東急線内通勤特急', cars: 10 }
   ];
   var STALE_SEC = 180;    // 3分以上更新がなければ「データが古い」と表示(30秒間隔の6回分失敗した状態)
-  var demo = false, trData = null;
-  try { if (!TRAIN_API || location.search.indexOf('mock=1') >= 0) { demo = true; } } catch (e) { demo = !TRAIN_API; }
+  // データの出どころ: 'timetable'=公式時刻表(既定、遅延は反映されない) / 'api'=中継サーバー(遅延・在線あり) / 'demo'=?mock=1 の見た目確認用
+  var mode = TRAIN_API ? 'api' : 'timetable';
+  try { if (location.search.indexOf('mock=1') >= 0) { mode = 'demo'; } } catch (e) {}
+  var trData = null;
 
   function carsFor(t) {
     var i, r;
+    if (t.cars) { return t.cars; }   // 時刻表の表記(□=8両)があればそれを最優先
     for (i = 0; i < CAR_RULES.length; i++) {
       r = CAR_RULES[i];
       if (r.dest && String(t.dest).indexOf(r.dest) < 0) { continue; }
@@ -329,8 +332,65 @@
     return { fetchedAtMs: now, status: 'ok', statusText: '', trains: out, positions: pos };
   }
 
+  // ---- 時刻表(東京メトロ公式 西早稲田駅 F11.pdf、渋谷方面) --------------------------------
+  // 出典: https://www.tokyometro.jp/station/timetable/pdf/202609/F11.pdf (2026年3月改正)
+  // 形式: 'HHMM,種別,行先,両数' を ';' でつなぐ。0時台は 24 時台として書く(例 2405)。両数は 8 か 10、不明は空。種別が空欄は渋谷止まりの普通。
+  // 2026年3月改正の時刻表。PDFの表から、種別・行先の小さな文字と、分の数字を囲む枠(□=8両、枠なし=10両)を位置情報で読み取った。
+  // 検算: 平日・土休日とも169本。種別×行先の内訳は駅探の時刻表と平日分が全て一致。16〜18時台は目視でも枠まで一致を確認。
+  var TIMETABLE = {
+    wd: '0511,各,無,8;0529,各,無,8;0538,急,無,10;0551,急,無,8;0557,各,無,8;0604,各,無,8;0613,急,無,10;0620,各,無,8;0631,各,無,8;0639,各,無,8;0643,急特,湘,10;0652,各,無,8;0657,各,無,8;0706,各,無,8;0714,急特,湘,10;0721,各,無,8;0729,通特,無,10;0736,急特,湘,10;0745,各,無,8;0752,各,無,8;0759,各,無,8;0807,各,無,8;0813,各,無,8;0821,各,武,8;0829,各,無,8;0836,各,無,8;0839,各,武,8;0845,各,無,8;0849,各,無,8;0856,各,武,8;0900,急各,湘,10;0907,各,無,8;0913,急,無,8;0920,急各,谷,10;0925,各,無,8;0927,急,無,10;0937,急,武,10;0943,各,無,8;0950,各,無,8;0958,各,無,8;1007,各,武,8;1017,急,無,8;1022,各,無,8;1028,急,無,8;1037,各,無,8;1043,急,無,10;1052,各,無,8;1058,各,無,8;1105,急,武,10;1107,各,無,8;1112,急,無,8;1122,各,無,8;1128,各,無,8;1135,急各,湘,10;1137,各,無,8;1142,急,無,8;1152,各,無,8;1158,各,無,8;1205,急各,湘,10;1207,各,無,8;1212,急,無,8;1222,各,無,8;1228,各,無,8;1235,急各,湘,10;1237,各,無,8;1242,急,無,8;1252,各,無,8;1258,各,無,8;1305,急各,湘,10;1307,各,無,8;1312,急,無,8;1322,各,無,8;1328,各,無,8;1335,急各,湘,10;1337,各,無,8;1342,急,無,10;1352,各,無,8;1358,各,無,8;1405,急各,湘,10;1407,各,無,8;1412,急,無,8;1422,各,無,8;1428,各,無,8;1435,急各,湘,10;1437,各,無,8;1442,急,無,8;1452,各,無,8;1458,各,無,8;1505,急各,湘,10;1507,各,無,8;1512,急,無,8;1522,各,無,8;1528,急,無,8;1535,急各,湘,10;1539,各,無,8;1542,急,無,10;1552,急,無,8;1558,各,無,8;1602,急,無,10;1609,各,無,8;1614,各,無,8;1618,急,無,10;1628,各,無,8;1631,急,無,8;1639,急各,湘,10;1644,急,無,10;1649,各,無,8;1655,急各,谷,10;1658,各,無,8;1702,急,無,10;1712,急特,湘,10;1718,急,無,10;1727,急各,湘,10;1730,各,無,8;1733,急,無,8;1742,急各,湘,10;1748,各,無,8;1758,各,無,8;1803,急,無,8;1812,急特,湘,10;1818,各,武,8;1825,各,無,8;1828,急各,湘,10;1832,急,無,8;1842,急特,湘,10;1848,各,無,8;1857,通特,無,10;1907,急,無,8;1912,急特,湘,10;1918,各,無,8;1927,急各,湘,10;1933,急,無,8;1942,急各,湘,10;1948,各,無,8;1957,急各,湘,10;2002,急,無,8;2013,各,無,8;2018,各,武,8;2027,各,無,8;2033,急,無,10;2041,急各,湘,10;2048,急,武,10;2057,各,無,8;2103,急,無,10;2111,急各,湘,10;2118,各,武,8;2127,各,無,8;2133,急各,湘,10;2142,各,無,8;2148,各,無,8;2157,各,無,8;2203,通特,無,10;2212,各,無,8;2223,急各,湘,10;2228,各,無,8;2237,急,武,10;2243,各,無,8;2248,急特,海,10;2258,各,無,8;2302,通特,無,10;2308,各,武,8;2314,各,無,8;2322,各,菊,8;2331,各,無,8;2339,各,武,8;2348,各,横,8;2356,各,菊,8;2406,各,元,8;2420,,渋,8',
+    hd: '0511,各,無,8;0529,各,無,8;0539,各,無,8;0551,各,無,8;0556,各,無,8;0607,各,無,8;0611,急,無,10;0621,各,無,8;0627,各,無,8;0639,特,無,10;0647,各,無,8;0658,各,無,8;0704,特,無,10;0713,急,無,10;0721,各,無,8;0730,急各,湘,10;0736,各,無,8;0742,急,無,8;0751,各,無,8;0801,急,無,8;0806,急各,湘,10;0809,各,無,8;0812,急,無,8;0821,各,無,8;0827,急,無,8;0836,急各,谷,10;0840,各,無,8;0843,急,無,10;0852,各,無,8;0858,急,無,10;0907,急各,湘,10;0910,各,無,8;0912,急,無,10;0922,各,無,8;0928,急,無,10;0937,急各,湘,10;0943,急,無,10;0951,各,無,8;0954,急,無,8;0957,急各,湘,10;1005,各,無,8;1013,急,無,10;1022,各,無,8;1028,急,無,10;1035,各,無,8;1037,急各,湘,10;1043,急,無,8;1052,各,無,8;1058,各,無,8;1105,急各,湘,10;1107,各,無,8;1113,急,無,8;1122,各,無,8;1128,各,無,8;1135,急各,湘,10;1137,各,無,8;1143,急,無,10;1152,各,無,8;1158,各,無,8;1205,急各,湘,10;1207,各,無,8;1213,急,無,10;1222,各,無,8;1228,各,無,8;1235,急各,湘,10;1237,各,無,8;1243,急,無,10;1252,各,無,8;1258,各,無,8;1305,急各,湘,10;1307,各,無,8;1313,急,無,10;1322,各,無,8;1328,各,無,8;1335,急各,湘,10;1337,各,無,8;1343,急,無,8;1352,各,無,8;1358,各,無,8;1405,急各,湘,10;1407,各,無,8;1413,急,無,8;1422,各,無,8;1428,各,無,8;1435,急各,湘,10;1437,各,無,8;1443,急,無,10;1452,各,無,8;1458,各,無,8;1505,急各,湘,10;1507,各,無,8;1513,急,無,10;1522,各,無,8;1528,各,無,8;1535,急各,湘,10;1537,各,無,8;1543,急,無,10;1552,各,無,8;1558,各,無,8;1605,急各,海,10;1607,各,無,8;1613,急,無,10;1620,各,無,8;1625,各,無,8;1628,急,無,8;1636,各,無,8;1643,急,無,8;1649,急各,湘,10;1652,各,無,8;1658,急,無,10;1707,各,無,8;1713,急,無,8;1720,急各,湘,10;1723,各,無,8;1728,急,無,10;1739,各,無,8;1743,急各,湘,10;1752,各,無,8;1755,各,無,8;1802,急,無,8;1807,各,無,8;1813,急,無,10;1821,急特,海,10;1823,各,無,8;1828,急,無,10;1836,各,菊,8;1839,急各,湘,10;1846,急,無,10;1852,各,無,8;1858,各,無,8;1903,急特,海,10;1913,各,無,8;1921,急,無,10;1924,各,無,8;1929,各,無,8;1933,急各,湘,10;1943,各,無,8;1951,各,無,8;2003,各,無,8;2013,各,無,8;2020,急,無,10;2025,急各,湘,10;2028,各,無,8;2036,急,武,8;2043,各,無,8;2052,急,無,10;2058,各,無,8;2103,急,武,10;2111,各,無,8;2122,各,無,8;2131,急各,湘,10;2142,各,無,8;2153,各,無,8;2206,各,無,8;2212,急特,海,10;2222,各,無,8;2227,急,無,10;2236,各,無,8;2243,急,無,10;2255,急,武,10;2301,各,無,8;2311,特,横,10;2320,急特,海,10;2328,各,無,8;2336,各,菊,8;2345,各,横,8;2354,各,菊,8;2404,各,元,8;2420,,渋,8'
+  };   // wd=平日、hd=土曜・休日
+  // 凡例(PDFより): 種別
+  var TT_VIA = { '各': '東急線内各停', '急': '東急線内急行', '急各': '東急線内急行・相鉄線内各停',
+                 '急特': '東急線内急行・相鉄線内特急', '通特': '東急線内通勤特急', '特': '東急線内特急' };
+  // パネルに出す短い呼び名
+  var TT_LABEL = { '各': '各停', '急': '急行', '急各': '急行(相鉄各停)', '急特': '急行(相鉄特急)', '通特': '通勤特急', '特': '特急' };
+  // 凡例(PDFより): 行先(無印=元町・中華街)
+  var TT_DEST = { '無': '元町・中華街', '海': '海老名', '湘': '湘南台', '谷': '西谷', '横': '横浜',
+                  '菊': '菊名', '元': '元住吉', '武': '武蔵小杉', '渋': '渋谷' };
+  // 祝日(土日以外で休日ダイヤになる日)。内閣府「国民の祝日」(www8.cao.go.jp/chosei/shukujitsu/gaiyou.html)で2026-11-10に照合済み。
+  // 2027年末以降は未登録なので、年が替わる前に追記が必要。
+  var HOLIDAYS = ['2026-11-23', '2027-01-01', '2027-01-11', '2027-02-11', '2027-02-23', '2027-03-22',
+                  '2027-04-29', '2027-05-03', '2027-05-04', '2027-05-05', '2027-07-19', '2027-08-11',
+                  '2027-09-20', '2027-09-23', '2027-10-11', '2027-11-03', '2027-11-23'];
+
+  function parseTT(str) {
+    var out = [], recs = str ? str.split(';') : [], i, f, hh, mm;
+    for (i = 0; i < recs.length; i++) {
+      f = recs[i].split(',');
+      if (f.length < 3 || !f[0]) { continue; }
+      hh = +f[0].substr(0, 2); mm = +f[0].substr(2, 2);
+      out.push({ min: hh * 60 + mm, via: TT_VIA[f[1]] || f[1], label: TT_LABEL[f[1]] || f[1] || '普通',
+                 dest: TT_DEST[f[2]] || f[2], cars: f[3] ? +f[3] : 0 });
+    }
+    return out;
+  }
+  var TT_PARSED = { wd: parseTT(TIMETABLE.wd), hd: parseTT(TIMETABLE.hd) };
+
+  function ymd(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function isHolidayDate(d) { var w = d.getDay(); return w === 0 || w === 6 || HOLIDAYS.indexOf(ymd(d)) >= 0; }
+
+  // 「今から先」の列車を、時刻表から作る。
+  // 運行日は朝4時で切り替える: 0時台の列車は前日のダイヤに属するため(始発は5時台、終電は0時台)。
+  function timetableData() {
+    var now = Date.now(), sd = new Date(now - 4 * 3600 * 1000), out = [], k, d, list, base, i, e;
+    for (k = 0; k < 2; k++) {               // 当日分と翌運行日分(終電後に始発を出すため)
+      d = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate() + k);
+      list = isHolidayDate(d) ? TT_PARSED.hd : TT_PARSED.wd;
+      base = d.getTime();
+      for (i = 0; i < list.length; i++) {
+        e = list[i];
+        out.push({ depMs: base + e.min * 60000, delaySec: null, nd: true, type: e.label, dest: e.dest, via: e.via, cars: e.cars });
+      }
+    }
+    out = out.filter(function (t) { return t.depMs > now; }).sort(function (a, b) { return a.depMs - b.depMs; }).slice(0, 16);
+    return { fetchedAtMs: now, status: 'ok', statusText: '', trains: out, positions: [], source: 'timetable' };
+  }
+
   function loadTrains() {
-    if (demo) { trData = mockData(); return; }
+    if (mode === 'demo') { trData = mockData(); return; }
+    if (mode === 'timetable') { trData = timetableData(); return; }
     fetch(TRAIN_API).then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
       .then(function (j) {
         var t = [], i;
@@ -342,9 +402,17 @@
       }).catch(function () { stamp('電車データ取得失敗'); });
   }
 
+  // 翌日の時刻には「翌」を付ける(終電後に翌朝の始発を出す時、当日の電車と見間違えないため)
+  function hhmmD(ms, now) { return (new Date(ms).getDate() !== new Date(now).getDate() ? '翌' : '') + hhmm(ms); }
   function hhmm(ms) { var d = new Date(ms); return p2(d.getHours()) + ':' + p2(d.getMinutes()); }
-  function mmss(ms) { return Math.floor(ms / 60000) + '<small>分</small>' + p2(Math.floor((ms % 60000) / 1000)) + '<small>秒</small>'; }
+  function mmss(ms) {
+    var m = Math.floor(ms / 60000);
+    // 1時間以上先(終電後など)は「3時間11分」の形にする: 分が3桁になると枠からあふれるため
+    if (m >= 60) { return Math.floor(m / 60) + '<small>時間</small>' + p2(m % 60) + '<small>分</small>'; }
+    return m + '<small>分</small>' + p2(Math.floor((ms % 60000) / 1000)) + '<small>秒</small>';
+  }
   function delayText(t) {
+    if (t.nd) { return ''; }          // 時刻表ベースの列車は遅延情報を持たない(「遅延情報なし」と出すと誤解を招くため非表示)
     if (t.delaySec == null) { return '<span class="dim">遅延情報なし</span>'; }
     var m = Math.round(t.delaySec / 60);
     return m > 0 ? '<span class="warn">+' + m + '分遅れ</span>' : '<span class="ok">定刻</span>';
@@ -377,18 +445,20 @@
       cnt++;
     }
     document.getElementById('lnDiagram').innerHTML = html;
-    document.getElementById('lnDemo').textContent = demo ? ' デモ' : '';
+    document.getElementById('lnDemo').textContent = (mode === 'demo') ? ' デモ' : (mode === 'timetable' ? ' 時刻表ベース' : '');
     var info;
     if (d.status === 'suspended') { info = '<span class="bad">' + d.statusText + '</span>'; }
     else if (d.status === 'delay') { info = '<span class="warn">' + (d.statusText || '遅延が発生しています') + '</span>'; }
     else { info = '<span class="ok">平常運転</span>' + (d.statusText ? ' <span class="dim">' + d.statusText + '</span>' : ''); }
-    document.getElementById('lnInfo').innerHTML = info + ' <span class="dim">/ 西早稲田へ向かう列車 ' + cnt + '本</span>';
+    document.getElementById('lnInfo').innerHTML = (mode === 'timetable')
+      ? '<span class="dim">在線・遅延のリアルタイム情報は未接続です</span>'
+      : info + ' <span class="dim">/ 西早稲田へ向かう列車 ' + cnt + '本</span>';
   }
 
   function leaveBox(title, ms, now, cls) {
     var past = ms <= now;
     return '<div class="lv"><div class="k">' + title + '</div><div class="v ' + (past ? 'dim' : cls) + '">' +
-           (past ? '過ぎた' : hhmm(Math.floor(ms / 60000) * 60000) + ' <span style="font-size:16px">に出る</span>') + '</div></div>';
+           (past ? '過ぎた' : hhmmD(Math.floor(ms / 60000) * 60000, now) + ' <span style="font-size:16px">に出る</span>') + '</div></div>';
   }
 
   function renderTrain() {
@@ -396,9 +466,13 @@
     var st = el('trStatus'), i, list = [], t, rd, m, d = trData;
     if (!d) { el('trInfo').textContent = '読み込み中…'; return; }
     renderLine(d);
-    st.className = ''; st.textContent = demo ? ' デモデータ(実データではありません)' : '';
+    if (mode === 'timetable' && !TT_PARSED.wd.length) {
+      el('trCount').textContent = '--'; el('trMode').textContent = ''; el('trLeave').innerHTML = ''; el('trNext').innerHTML = '';
+      el('trInfo').innerHTML = '<span class="bad">時刻表データが未登録です</span>'; return;
+    }
+    st.className = ''; st.textContent = (mode === 'demo') ? ' デモデータ(実データではありません)' : (mode === 'timetable' ? ' 時刻表ベース(遅延は反映されません)' : '');
     var age = (now - d.fetchedAtMs) / 1000;
-    if (!demo && age > STALE_SEC) { st.className = 'bad'; st.textContent = ' ⚠ データが古い(' + Math.floor(age / 60) + '分前)'; }
+    if (mode === 'api' && age > STALE_SEC) { st.className = 'bad'; st.textContent = ' ⚠ データが古い(' + Math.floor(age / 60) + '分前)'; }
     if (d.status === 'suspended') {
       st.className = 'bad'; st.textContent = ' 運行情報あり';
       el('trCount').textContent = '--'; el('trMode').textContent = '';
@@ -419,14 +493,14 @@
     var cls = !slowOk ? 'bad' : (rem <= 3 * 60000 ? 'warn' : 'ok');
     el('trCount').className = cls; el('trCount').innerHTML = mmss(rem);
     el('trMode').className = cls; el('trMode').textContent = slowOk ? 'で出発(ゆっくり歩いて間に合う)' : 'で出発(急げば間に合う)';
-    el('trInfo').innerHTML = hhmm(a.rd) + '発 ' + a.t.type + ' ' + a.t.dest + '行き ' + delayText(a.t);
+    el('trInfo').innerHTML = hhmmD(a.rd, now) + '発 ' + a.t.type + ' ' + a.t.dest + '行き ' + delayText(a.t);
     el('trLeave').innerHTML =
       leaveBox('ゆっくり(歩き' + WALK_SLOW + '分+余裕' + a.m + '分・' + carTag(a.t) + ')', a.ls, now, 'ok') +
       leaveBox('急ぎ(歩き' + WALK_FAST + '分+余裕' + a.m + '分・' + carTag(a.t) + ')', a.lf, now, 'warn');
     var nx = '';
     for (i = 1; i < list.length; i++) {
-      nx += '<div>' + hhmm(list[i].rd) + '発 ' + list[i].t.type + ' ' + list[i].t.dest + ' ' + delayText(list[i].t) +
-            ' <span class="dim">/ ゆっくり' + hhmm(Math.floor(list[i].ls / 60000) * 60000) + 'に出る</span></div>';
+      nx += '<div>' + hhmmD(list[i].rd, now) + '発 ' + list[i].t.type + ' ' + list[i].t.dest + ' ' + delayText(list[i].t) +
+            ' <span class="dim">/ ゆっくり' + hhmmD(Math.floor(list[i].ls / 60000) * 60000, now) + 'に出る</span></div>';
     }
     el('trNext').innerHTML = nx;
   }
