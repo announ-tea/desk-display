@@ -76,7 +76,19 @@
   .leaflet-control-attribution{font-size:9px!important;background:rgba(14,17,22,.75)!important;color:#9aa4b2!important}
   .leaflet-control-attribution a{color:#9aa4b2!important}
 
-  #slots{display:-webkit-flex;display:flex;margin-top:12px;height:150px}
+  #slots{display:-webkit-flex;display:flex;margin-top:12px;height:176px}
+  #trainSlot{-webkit-flex:3 1 0;flex:3 1 0;min-width:0}
+  #moodleSlot{-webkit-flex:2 1 0;flex:2 1 0;min-width:0}
+  #trStatus{margin-left:8px;color:var(--warn);letter-spacing:0}
+  #trStatus.bad{color:var(--bad)}
+  #trMain{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;white-space:nowrap}
+  #trCount{font-size:44px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums}
+  #trCount small{font-size:18px;color:var(--sub);margin:0 6px 0 2px}
+  #trMode{font-size:13px;margin-left:10px;padding-bottom:6px}
+  #trInfo{font-size:14px;margin-top:6px;white-space:nowrap;overflow:hidden}
+  #trNext{margin-top:6px;border-top:1px solid var(--line);padding-top:5px;font-size:13px;color:var(--sub)}
+  #trNext div{white-space:nowrap;overflow:hidden;line-height:1.6}
+  .ok{color:#5fd68a}.warn{color:var(--warn)}.bad{color:var(--bad)}.dim{color:var(--sub)}
   .slot{-webkit-flex:1;flex:1}
   .slot + .slot{margin-left:12px}
   .slot .ph{color:var(--sub);font-size:15px;margin-top:20px}
@@ -122,8 +134,13 @@
       </div>
     </div>
     <div id="slots">
-      <div class="slot panel"><div class="label">西早稲田駅 渋谷方面</div><div class="ph">第3段階で追加</div></div>
-      <div class="slot panel"><div class="label">課題の提出期限(Moodle)</div><div class="ph">第2段階で追加</div></div>
+      <div class="slot panel" id="trainSlot">
+        <div class="label">西早稲田駅 渋谷方面<span id="trStatus"></span></div>
+        <div id="trMain"><div id="trCount">--</div><div id="trMode"></div></div>
+        <div id="trInfo">読み込み中…</div>
+        <div id="trNext"></div>
+      </div>
+      <div class="slot panel" id="moodleSlot"><div class="label">課題の提出期限(Moodle)</div><div class="ph">あとで追加</div></div>
     </div>
   </div>
 </div>
@@ -339,6 +356,107 @@
     btnLabel(); buildFrames();
   });
   loadRadar(); setInterval(loadRadar, RADAR_INTERVAL);
+
+  // ---- 電車(西早稲田駅 渋谷方面) -----------------------------------------
+  // 中継サーバー(Cloudflare Worker)のURL。空欄の間はデモデータを表示する(実データではない)。
+  var TRAIN_API = '';
+  // 30秒ごと: 列車位置は分単位で変わるので十分細かく、Workers無料枠(1日10万回)にも収まる(1日2,880回)
+  var TRAIN_INTERVAL = 30 * 1000;
+  var WALK_FAST = 3;      // 分。急いで歩く場合(実測の申告値)
+  var WALK_SLOW = 6;      // 分。ゆっくり歩く場合。申告の5〜6分のうち上限側を採用(乗り遅れ防止のため)
+  var MARGIN_DEFAULT = 2; // 分。車両数が不明な列車は、申告の1〜2分のうち大きい側(安全側)
+  var MARGIN_BY_CARS = { 8: 1, 10: 2 }; // 分。★仮置き。8両/10両のどちらが長く必要か、実際に合わせて直す
+  // 行き先・種別から車両数を判定する表。上から順に、最初に一致したものを採用。
+  // 例: { dest: '元町・中華街', type: '', cars: 10 }  (type が空欄なら種別は問わない)
+  var CAR_RULES = [];
+  var STALE_SEC = 180;    // 3分以上更新がなければ「データが古い」と表示(30秒間隔の6回分失敗した状態)
+  var demo = false, trData = null;
+  try { if (!TRAIN_API || location.search.indexOf('mock=1') >= 0) { demo = true; } } catch (e) { demo = !TRAIN_API; }
+
+  function carsFor(t) {
+    var i, r;
+    for (i = 0; i < CAR_RULES.length; i++) {
+      r = CAR_RULES[i];
+      if (r.dest && String(t.dest).indexOf(r.dest) < 0) { continue; }
+      if (r.type && String(t.type).indexOf(r.type) < 0) { continue; }
+      return r.cars;
+    }
+    return null;
+  }
+  function marginFor(t) { var c = carsFor(t); return (c && MARGIN_BY_CARS[c] != null) ? MARGIN_BY_CARS[c] : MARGIN_DEFAULT; }
+
+  // デモ用: 約5.5分間隔の架空の列車(遅延・遅延情報なし・種別違いを混ぜて表示を試せるようにする)
+  function mockData() {
+    var now = Date.now(), base = Math.ceil(now / 60000) * 60000 + 2 * 60000, out = [], k, dep;
+    for (k = 0; k < 10; k++) {
+      dep = Math.round((base + k * 5.5 * 60000) / 60000) * 60000;
+      out.push({ depMs: dep, delaySec: (k === 1 ? null : (k % 3) * 60), type: (k % 2 ? '急行' : '各停'),
+                 dest: (k % 2 ? '元町・中華街' : '渋谷') });
+    }
+    return { fetchedAtMs: now, status: 'ok', statusText: '', trains: out };
+  }
+
+  function loadTrains() {
+    if (demo) { trData = mockData(); return; }
+    fetch(TRAIN_API).then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+      .then(function (j) {
+        var t = [], i;
+        for (i = 0; i < j.trains.length; i++) {
+          t.push({ depMs: Date.parse(j.trains[i].dep), delaySec: j.trains[i].delaySec,
+                   type: j.trains[i].type, dest: j.trains[i].dest });
+        }
+        trData = { fetchedAtMs: Date.now(), status: j.status, statusText: j.statusText || '', trains: t };
+      }).catch(function () { stamp('電車データ取得失敗'); });
+  }
+
+  function hhmm(ms) { var d = new Date(ms); return p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+  function mmss(ms) { return Math.floor(ms / 60000) + '<small>分</small>' + p2(Math.floor((ms % 60000) / 1000)) + '<small>秒</small>'; }
+  function delayText(t) {
+    if (t.delaySec == null) { return '<span class="dim">遅延情報なし</span>'; }
+    var m = Math.round(t.delaySec / 60);
+    return m > 0 ? '<span class="warn">+' + m + '分遅れ</span>' : '<span class="ok">定刻</span>';
+  }
+
+  function renderTrain() {
+    var now = Date.now(), el = function (id) { return document.getElementById(id); };
+    var st = el('trStatus'), i, list = [], t, rd, m, d = trData;
+    if (!d) { el('trInfo').textContent = '読み込み中…'; return; }
+    st.className = ''; st.textContent = demo ? ' デモデータ(実データではありません)' : '';
+    var age = (now - d.fetchedAtMs) / 1000;
+    if (!demo && age > STALE_SEC) { st.className = 'bad'; st.textContent = ' ⚠ データが古い(' + Math.floor(age / 60) + '分前)'; }
+    if (d.status === 'suspended') {
+      st.className = 'bad'; st.textContent = ' 運行情報あり';
+      el('trCount').textContent = '--'; el('trMode').textContent = '';
+      el('trInfo').innerHTML = '<span class="bad">' + d.statusText + '</span>'; el('trNext').innerHTML = ''; return;
+    }
+    for (i = 0; i < d.trains.length; i++) {
+      t = d.trains[i]; rd = t.depMs + (t.delaySec || 0) * 1000; m = marginFor(t);
+      var lf = rd - (WALK_FAST + m) * 60000, ls = rd - (WALK_SLOW + m) * 60000;
+      if (lf <= now) { continue; }              // 急いでも間に合わない電車は表示しない
+      list.push({ t: t, rd: rd, lf: lf, ls: ls });
+      if (list.length >= 3) { break; }
+    }
+    if (!list.length) {
+      el('trCount').textContent = '--'; el('trMode').textContent = '';
+      el('trInfo').textContent = '間に合う電車がありません'; el('trNext').innerHTML = ''; return;
+    }
+    var a = list[0], slowOk = a.ls > now, rem = slowOk ? a.ls - now : a.lf - now;
+    var cls = !slowOk ? 'bad' : (rem <= 3 * 60000 ? 'warn' : 'ok');
+    el('trCount').className = cls; el('trCount').innerHTML = mmss(rem);
+    el('trMode').className = cls; el('trMode').textContent = slowOk ? 'で出発(ゆっくり歩いて間に合う)' : 'で出発(急げば間に合う)';
+    el('trInfo').innerHTML = hhmm(a.rd) + '発 ' + a.t.type + ' ' + a.t.dest + '行き ' + delayText(a.t) +
+      ' <span class="dim">/ 研究室を ゆっくり' + hhmm(Math.floor(a.ls / 60000) * 60000) +
+      ' ・ 急ぎ' + hhmm(Math.floor(a.lf / 60000) * 60000) + ' に出る</span>';
+    var nx = '';
+    for (i = 1; i < list.length; i++) {
+      nx += '<div>' + hhmm(list[i].rd) + '発 ' + list[i].t.type + ' ' + list[i].t.dest + ' ' + delayText(list[i].t) +
+            ' <span class="dim">/ ゆっくり' + hhmm(Math.floor(list[i].ls / 60000) * 60000) + 'に出る</span></div>';
+    }
+    el('trNext').innerHTML = nx;
+  }
+  loadTrains(); renderTrain();
+  setInterval(loadTrains, TRAIN_INTERVAL);
+  setInterval(renderTrain, 1000);
 
   // ---- 共通 ---------------------------------------------------------------
   function stamp(s) { document.getElementById('status').textContent = s; }
