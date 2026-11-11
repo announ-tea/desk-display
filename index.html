@@ -4,15 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Desk">
 <meta name="format-detection" content="telephone=no">
 <title>Desk Display</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
   :root{
-    --bg:#0e1116; --panel:#171b22; --line:#262c36;
-    --text:#e8ecf2; --sub:#8b95a5; --accent:#4cc2ff; --warn:#ffb020; --bad:#ff5c5c;
+    /* 白テーマ(昼間の明るい部屋でも読めるよう、文字は黒に近い濃色、背景は白)。
+       警告色は白背景で読めるよう、暗めの橙・赤・緑にしている(暗いテーマ用の明るい色だと白地では薄くて読めないため)。 */
+    --bg:#eef1f5; --panel:#ffffff; --line:#d5dbe4;
+    --text:#10161e; --sub:#566272; --accent:#0b63b8; --warn:#b45309; --bad:#c62828; --ok:#14833f;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);
@@ -26,18 +28,18 @@
     text-align:center;font-size:26px;color:var(--sub);line-height:1.6}
   #left{width:400px;-webkit-flex:none;flex:none;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
   #right{-webkit-flex:1;flex:1;margin-left:12px;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;min-width:0}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(16,24,40,.06)}
   .label{font-size:12px;color:var(--sub);letter-spacing:.08em;margin-bottom:6px}
 
   #clock{text-align:center;padding:12px 10px 10px}
-  #time{font-size:92px;font-weight:200;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  #time{font-size:92px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   #time .sec{font-size:34px;color:var(--sub);margin-left:6px;letter-spacing:0}
   #date{font-size:22px;color:var(--sub);margin-top:8px}
 
   #weather{margin-top:12px;-webkit-flex:none;flex:none}
   #now{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
   #nowIcon{font-size:62px;width:84px;text-align:center}
-  #nowTemp{font-size:58px;font-weight:300;line-height:1}
+  #nowTemp{font-size:58px;font-weight:400;line-height:1}
   #nowTemp small{font-size:22px;color:var(--sub)}
   #nowText{font-size:18px;margin-top:4px}
   #nowSub{font-size:14px;color:var(--sub);margin-top:2px}
@@ -56,58 +58,99 @@
   .d .r .lo{color:var(--sub);margin-right:10px}
 
   #radarBox{position:relative;-webkit-flex:none;flex:none;height:270px;padding:0;overflow:hidden}
-  #map{position:absolute;top:0;left:0;right:0;bottom:0;background:#0b0d11}
-  #radarInfo{position:absolute;z-index:1000;left:10px;top:10px;background:rgba(14,17,22,.82);
+  #map{position:absolute;top:0;left:0;right:0;bottom:0;background:#e6ebf1}
+  #radarInfo{position:absolute;z-index:1000;left:10px;top:10px;background:rgba(255,255,255,.92);
     border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:15px}
   #radarInfo b{font-variant-numeric:tabular-nums}
   #radarTag{margin-left:4px;color:var(--sub)}
   #radarTag.fc{color:var(--warn);font-weight:600}
-  #fcBtn{margin-left:10px;padding:3px 10px;font-size:13px;color:var(--text);background:#232a35;
-    border:1px solid #3a4352;border-radius:8px;font-family:inherit}
+  #fcBtn{margin-left:10px;padding:3px 10px;font-size:13px;color:var(--text);background:#eef2f7;
+    border:1px solid #b8c2d0;border-radius:8px;font-family:inherit}
   #dots{position:absolute;z-index:1000;left:10px;bottom:10px;height:8px;display:-webkit-flex;display:flex}
-  #dots i{display:block;width:14px;height:6px;margin-right:3px;border-radius:3px;background:#3a4352}
-  #dots i.fc{background:#6b5520}
+  #dots i{display:block;width:14px;height:6px;margin-right:3px;border-radius:3px;background:#c3ccd8}
+  #dots i.fc{background:#e8c27a}
   #dots i.on{background:var(--accent)}
   #dots i.fc.on{background:var(--warn)}
   #fcNote{color:var(--warn);font-size:12px;margin-left:6px}
-  #legend{position:absolute;z-index:1000;right:10px;bottom:24px;background:rgba(14,17,22,.82);
+  #legend{position:absolute;z-index:1000;right:10px;bottom:24px;background:rgba(255,255,255,.92);
     border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:11px;color:var(--sub)}
-  #legend span{display:inline-block;width:14px;height:10px;margin-right:2px;vertical-align:middle}
-  .leaflet-control-attribution{font-size:9px!important;background:rgba(14,17,22,.75)!important;color:#9aa4b2!important}
-  .leaflet-control-attribution a{color:#9aa4b2!important}
+  #legend span{display:inline-block;width:14px;height:10px;margin-right:2px;vertical-align:middle;border:1px solid rgba(0,0,0,.28)}
+  .leaflet-control-attribution{font-size:9px!important;background:rgba(255,255,255,.8)!important;color:#4b5565!important}
+  .leaflet-control-attribution a{color:#4b5565!important}
 
   /* 電車パネル(右下、大きめ) */
   #trainPanel{margin-top:12px;-webkit-flex:1;flex:1;min-height:0;overflow:hidden}
   #trStatus{margin-left:8px;color:var(--warn);letter-spacing:0}
   #trStatus.bad{color:var(--bad)}
   #trMain{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;white-space:nowrap;margin-top:2px}
-  #trCount{font-size:104px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums}
+  #trCount{font-size:90px;font-weight:400;line-height:1;font-variant-numeric:tabular-nums}
   #trCount small{font-size:30px;color:var(--sub);margin:0 10px 0 4px}
   #trMode{font-size:16px;padding-bottom:12px;margin-left:6px}
-  #trInfo{font-size:24px;margin-top:10px;white-space:nowrap;overflow:hidden}
+  #trInfo{font-size:18px;margin-top:8px;white-space:nowrap;overflow:hidden}
   #trLeave{display:-webkit-flex;display:flex;margin-top:10px}
-  .lv{-webkit-flex:1;flex:1;background:#1d232c;border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:0}
+  .lv{-webkit-flex:1;flex:1;background:#f1f4f8;border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:0}
   .lv + .lv{margin-left:10px}
   .lv .k{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden}
   .lv .v{font-size:34px;font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap}
-  #trNext{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;font-size:18px;color:var(--sub)}
-  #trNext div{white-space:nowrap;overflow:hidden;line-height:1.75}
-  .ok{color:#5fd68a}.warn{color:var(--warn)}.bad{color:var(--bad)}.dim{color:var(--sub)}
+  #trNext{margin-top:8px;border-top:1px solid var(--line)}
+
+  /* 発車標(駅の案内表示)風の1行: 時刻 / 種別チップ / 行き先の駅ナンバリング / 行き先 / 最終・両数 / 補足 */
+  .bd{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;white-space:nowrap}
+  .bt{font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
+  .bt .nx{font-size:.5em;margin-right:2px;color:var(--sub)}
+  .bk{color:#fff;background:#1f5bd6;border-radius:4px;text-align:center;font-weight:700;line-height:1.25;-webkit-flex:none;flex:none}
+  .bk.k2{background:#d9640b}.bk.k3{background:#b3261e}
+  .sb{color:#fff;text-align:center;line-height:1;border-radius:4px;-webkit-flex:none;flex:none;background:#888}
+  .sb i{display:block;font-style:normal;font-weight:700}
+  .sb b{display:block;font-weight:700}
+  .sb.none{background:transparent}
+  .sb.TY{background:#c8205b}.sb.MM{background:#1b3f94}.sb.F{background:#9c5e31}.sb.SO{background:#0b2f6b}
+  .bm{-webkit-flex:1;flex:1;min-width:0}
+  .bdn{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+  .dn{font-weight:700;color:var(--text);line-height:1.1}
+  .dn.w{letter-spacing:.5em;margin-right:-.1em}
+  .bc{color:var(--text);font-weight:600;line-height:1.15;-webkit-flex:none;flex:none}
+  .bc u{display:block;text-decoration:none}
+  .bs{color:var(--sub);overflow:hidden;text-overflow:ellipsis}
+  .bx{-webkit-flex:none;flex:none;color:var(--sub);text-align:right;margin-left:auto;padding-left:8px}
+  .bx b{color:var(--text);font-weight:700}
+
+  /* 大(次の電車): 添付画像と同じく、行き先の下に区切り線と補足 */
+  .bd.lg .bt{font-size:36px;min-width:92px}
+  .bd.lg .bk{font-size:16px;width:86px;padding:3px 0;margin:0 10px 0 6px}
+  .bd.lg .sb{width:34px;padding:3px 0 4px;margin-right:10px}
+  .bd.lg .sb i{font-size:10px}.bd.lg .sb b{font-size:19px}
+  .bd.lg .dn{font-size:32px}
+  .bd.lg .bc{font-size:13px;margin-left:10px}
+  .bd.lg .bs{font-size:14px;border-top:1px solid var(--line);margin-top:3px;padding-top:2px}
+  /* 小(その次の電車): 1行にまとめ、補足は入り切らなければ省略記号で切る */
+  .bd.sm{padding:4px 0;border-top:1px solid var(--line)}
+  .bd.sm:first-child{border-top:0}
+  .bd.sm .bt{font-size:22px;min-width:66px}
+  .bd.sm .bk{font-size:12px;width:62px;padding:2px 0;margin:0 8px 0 4px}
+  .bd.sm .sb{width:24px;padding:2px 0 3px;margin-right:8px}
+  .bd.sm .sb i{font-size:8px}.bd.sm .sb b{font-size:13px}
+  .bd.sm .bm{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+  .bd.sm .dn{font-size:21px}
+  .bd.sm .bc{font-size:12px;margin-left:7px}
+  .bd.sm .bs{font-size:12px;margin-left:9px;-webkit-flex:1;flex:1;min-width:0;white-space:nowrap}
+  .bd.sm .bx{font-size:13px}
+  .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.dim{color:var(--sub)}
 
   /* 在線状況パネル(左下、天気の下) */
   #linePanel{margin-top:12px;-webkit-flex:1;flex:1;min-height:0;overflow:hidden}
   #lnDemo{margin-left:8px;color:var(--warn);letter-spacing:0}
   #lnDiagram{position:relative;height:84px;margin-top:4px}
-  #lnLine{position:absolute;left:8%;right:8%;top:42px;height:3px;background:#3a4352;border-radius:2px}
-  .lnSt{position:absolute;top:36px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#171b22;border:3px solid #6b7686}
+  #lnLine{position:absolute;left:8%;right:8%;top:42px;height:3px;background:#c3ccd8;border-radius:2px}
+  .lnSt{position:absolute;top:36px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#fff;border:3px solid #8b97a8}
   .lnSt.me{border-color:var(--accent);background:var(--accent)}
   .lnNm{position:absolute;top:56px;width:70px;margin-left:-35px;text-align:center;font-size:11px;color:var(--sub)}
   .lnNm.me{color:var(--text);font-weight:600}
-  .lnTr{position:absolute;top:22px;width:22px;height:11px;margin-left:-11px;border-radius:4px;background:#5fd68a}
-  .lnTr.warn{background:var(--warn)}.lnTr.bad{background:var(--bad)}.lnTr.dim{background:#6b7686}
+  .lnTr{position:absolute;top:22px;width:22px;height:11px;margin-left:-11px;border-radius:4px;background:var(--ok)}
+  .lnTr.warn{background:var(--warn)}.lnTr.bad{background:var(--bad)}.lnTr.dim{background:#8b97a8}
   .lnDl{position:absolute;top:3px;width:48px;margin-left:-24px;text-align:center;font-size:12px}
   #lnInfo{margin-top:2px;font-size:14px;white-space:nowrap;overflow:hidden}
-  #status{position:absolute;right:16px;bottom:3px;font-size:10px;color:#4b5565}
+  #status{position:absolute;right:16px;bottom:3px;font-size:10px;color:#8b97a8}
 </style>
 </head>
 <body>
@@ -315,17 +358,17 @@
 
   // デモ用: 約5.5分間隔の架空の列車(実際の時刻表にある 種別×行き先 の組み合わせを回して、表示と車両数判定を試せるようにする)
   var MOCK_COMBOS = [
-    { type: '各停', dest: '元町・中華街', via: '東急線内各停' },
-    { type: '急行', dest: '元町・中華街', via: '東急線内急行' },
-    { type: '各停', dest: '湘南台', via: '東急線内急行・相鉄線内各停' },
-    { type: '通勤特急', dest: '元町・中華街', via: '東急線内通勤特急' },
-    { type: '各停', dest: '武蔵小杉', via: '東急線内各停' }
+    { type: '各駅停車', sub: '終点まで各駅', dest: '元町・中華街', via: '東急線内各停' },
+    { type: '急行', sub: '', dest: '元町・中華街', via: '東急線内急行' },
+    { type: '急行', sub: '相鉄線内各停', dest: '湘南台', via: '東急線内急行・相鉄線内各停' },
+    { type: '通勤特急', sub: '', dest: '元町・中華街', via: '東急線内通勤特急' },
+    { type: '各駅停車', sub: '終点まで各駅', dest: '横浜', via: '東急線内各停' }
   ];
   function mockData() {
     var now = Date.now(), base = Math.ceil(now / 60000) * 60000 + 2 * 60000, out = [], k, dep, c;
     for (k = 0; k < 10; k++) {
       dep = Math.round((base + k * 5.5 * 60000) / 60000) * 60000; c = MOCK_COMBOS[k % MOCK_COMBOS.length];
-      out.push({ depMs: dep, delaySec: (k === 1 ? null : (k % 3) * 60), type: c.type, dest: c.dest, via: c.via });
+      out.push({ depMs: dep, delaySec: (k === 1 ? null : (k % 3) * 60), type: c.type, sub: c.sub, last: (k === 4), dest: c.dest, via: c.via });
     }
     var pos = [ { from: 'F10', to: 'F11', delaySec: 60 }, { from: 'F08', to: null, delaySec: 0 },
                 { from: 'F06', to: 'F07', delaySec: null } ];
@@ -345,7 +388,10 @@
   var TT_VIA = { '各': '東急線内各停', '急': '東急線内急行', '急各': '東急線内急行・相鉄線内各停',
                  '急特': '東急線内急行・相鉄線内特急', '通特': '東急線内通勤特急', '特': '東急線内特急' };
   // パネルに出す短い呼び名
-  var TT_LABEL = { '各': '各停', '急': '急行', '急各': '急行(相鉄各停)', '急特': '急行(相鉄特急)', '通特': '通勤特急', '特': '特急' };
+  var TT_LABEL = { '各': '各駅停車', '急': '急行', '急各': '急行', '急特': '急行', '通特': '通勤特急', '特': '特急' };
+  // 発車標の補足欄。各駅停車は添付画像の「終点まで各駅」。相鉄線内の種別はPDF凡例の記載をそのまま使う。
+  // それ以外(急行・通勤特急・特急)の補足は、書式が分からないので出さない(推測で書かない)。
+  var TT_SUB = { '各': '終点まで各駅', '急各': '相鉄線内各停', '急特': '相鉄線内特急' };
   // 凡例(PDFより): 行先(無印=元町・中華街)
   var TT_DEST = { '無': '元町・中華街', '海': '海老名', '湘': '湘南台', '谷': '西谷', '横': '横浜',
                   '菊': '菊名', '元': '元住吉', '武': '武蔵小杉', '渋': '渋谷' };
@@ -361,7 +407,7 @@
       f = recs[i].split(',');
       if (f.length < 3 || !f[0]) { continue; }
       hh = +f[0].substr(0, 2); mm = +f[0].substr(2, 2);
-      out.push({ min: hh * 60 + mm, via: TT_VIA[f[1]] || f[1], label: TT_LABEL[f[1]] || f[1] || '普通',
+      out.push({ min: hh * 60 + mm, via: TT_VIA[f[1]] || f[1], label: TT_LABEL[f[1]] || f[1] || '普通', sub: TT_SUB[f[1]] || '',
                  dest: TT_DEST[f[2]] || f[2], cars: f[3] ? +f[3] : 0 });
     }
     return out;
@@ -379,9 +425,13 @@
       d = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate() + k);
       list = isHolidayDate(d) ? TT_PARSED.hd : TT_PARSED.wd;
       base = d.getTime();
+      // 「最終」: その運行日の中で、その行き先の最後の列車(添付画像の「横浜 最終」の読み方。行き先ごとの最終と解釈)
+      var lastOf = {};
+      for (i = 0; i < list.length; i++) { lastOf[list[i].dest] = i; }
       for (i = 0; i < list.length; i++) {
         e = list[i];
-        out.push({ depMs: base + e.min * 60000, delaySec: null, nd: true, type: e.label, dest: e.dest, via: e.via, cars: e.cars });
+        out.push({ depMs: base + e.min * 60000, delaySec: null, nd: true, type: e.label, sub: e.sub, last: lastOf[e.dest] === i,
+                   dest: e.dest, via: e.via, cars: e.cars });
       }
     }
     out = out.filter(function (t) { return t.depMs > now; }).sort(function (a, b) { return a.depMs - b.depMs; }).slice(0, 16);
@@ -396,7 +446,8 @@
         var t = [], i;
         for (i = 0; i < j.trains.length; i++) {
           t.push({ depMs: Date.parse(j.trains[i].dep), delaySec: j.trains[i].delaySec,
-                   type: j.trains[i].type, dest: j.trains[i].dest, via: j.trains[i].via || '' });
+                   type: j.trains[i].type, dest: j.trains[i].dest, via: j.trains[i].via || '',
+                   sub: j.trains[i].sub || '', last: !!j.trains[i].last });
         }
         trData = { fetchedAtMs: Date.now(), status: j.status, statusText: j.statusText || '', trains: t, positions: j.positions || [] };
       }).catch(function () { stamp('電車データ取得失敗'); });
@@ -404,7 +455,8 @@
 
   // 翌日の時刻には「翌」を付ける(終電後に翌朝の始発を出す時、当日の電車と見間違えないため)
   function hhmmD(ms, now) { return (new Date(ms).getDate() !== new Date(now).getDate() ? '翌' : '') + hhmm(ms); }
-  function hhmm(ms) { var d = new Date(ms); return p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+  // 発車標と同じ「0:10」「23:57」の形(時は0埋めしない)
+  function hhmm(ms) { var d = new Date(ms); return d.getHours() + ':' + p2(d.getMinutes()); }
   function mmss(ms) {
     var m = Math.floor(ms / 60000);
     // 1時間以上先(終電後など)は「3時間11分」の形にする: 分が3桁になると枠からあふれるため
@@ -455,6 +507,26 @@
       : info + ' <span class="dim">/ 西早稲田へ向かう列車 ' + cnt + '本</span>';
   }
 
+  // 行き先の駅ナンバリング(発車標の「TY 21」のバッジ)。TY=東急東横線 MM=みなとみらい線 SO=相鉄線 F=副都心線
+  // 出典: 横浜TY21・武蔵小杉TY11は添付画像、渋谷F16は時刻表PDFの表紙、相鉄(西谷SO08・海老名SO18・湘南台SO37)は路線図サイト。
+  // 元住吉TY12・菊名TY16・元町・中華街MM06は私の記憶(TY11〜TY21の間の駅数が合うことは確認)。
+  var BADGE = { '横浜': ['TY', '21'], '武蔵小杉': ['TY', '11'], '元住吉': ['TY', '12'], '菊名': ['TY', '16'],
+                '元町・中華街': ['MM', '06'], '渋谷': ['F', '16'], '湘南台': ['SO', '37'], '海老名': ['SO', '18'], '西谷': ['SO', '08'] };
+  function boardRow(t, size, now, extra) {
+    var b = BADGE[t.dest], nextDay = new Date(t.depMs).getDate() !== new Date(now).getDate(), c = carsFor(t);
+    var kc = String(t.type).indexOf('特急') >= 0 ? ' k3' : (String(t.type).indexOf('急行') >= 0 ? ' k2' : '');
+    var sub = (delayText(t) + ' ' + (t.sub || '')).replace(/^\s+|\s+$/g, '');
+    return '<div class="bd ' + size + '">' +
+      '<div class="bt">' + (nextDay ? '<span class="nx">翌</span>' : '') + hhmm(t.depMs) + '</div>' +
+      '<div class="bk' + kc + '">' + t.type + '</div>' +
+      (b ? '<div class="sb ' + b[0] + '"><i>' + b[0] + '</i><b>' + b[1] + '</b></div>' : '<div class="sb none"></div>') +
+      '<div class="bm"><div class="bdn"><span class="dn' + (t.dest.length === 2 ? ' w' : '') + '">' + t.dest + '</span>' +
+      '<span class="bc">' + (t.last ? '<u>最終</u>' : '') + (c ? c + '両' : '') + '</span>' +
+      (size === 'sm' && sub ? '<span class="bs">' + sub + '</span>' : '') + '</div>' +
+      (size === 'lg' && sub ? '<div class="bs">' + sub + '</div>' : '') + '</div>' +
+      (extra ? '<div class="bx">' + extra + '</div>' : '') + '</div>';
+  }
+
   function leaveBox(title, ms, now, cls) {
     var past = ms <= now;
     return '<div class="lv"><div class="k">' + title + '</div><div class="v ' + (past ? 'dim' : cls) + '">' +
@@ -493,14 +565,13 @@
     var cls = !slowOk ? 'bad' : (rem <= 3 * 60000 ? 'warn' : 'ok');
     el('trCount').className = cls; el('trCount').innerHTML = mmss(rem);
     el('trMode').className = cls; el('trMode').textContent = slowOk ? 'で出発(ゆっくり歩いて間に合う)' : 'で出発(急げば間に合う)';
-    el('trInfo').innerHTML = hhmmD(a.rd, now) + '発 ' + a.t.type + ' ' + a.t.dest + '行き ' + delayText(a.t);
+    el('trInfo').innerHTML = boardRow(a.t, 'lg', now, '');
     el('trLeave').innerHTML =
       leaveBox('ゆっくり(歩き' + WALK_SLOW + '分+余裕' + a.m + '分・' + carTag(a.t) + ')', a.ls, now, 'ok') +
       leaveBox('急ぎ(歩き' + WALK_FAST + '分+余裕' + a.m + '分・' + carTag(a.t) + ')', a.lf, now, 'warn');
     var nx = '';
     for (i = 1; i < list.length; i++) {
-      nx += '<div>' + hhmmD(list[i].rd, now) + '発 ' + list[i].t.type + ' ' + list[i].t.dest + ' ' + delayText(list[i].t) +
-            ' <span class="dim">/ ゆっくり' + hhmmD(Math.floor(list[i].ls / 60000) * 60000, now) + 'に出る</span></div>';
+      nx += boardRow(list[i].t, 'sm', now, 'ゆっくり <b>' + hhmmD(Math.floor(list[i].ls / 60000) * 60000, now) + '</b> に出る');
     }
     el('trNext').innerHTML = nx;
   }
