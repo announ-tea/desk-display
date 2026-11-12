@@ -30,16 +30,17 @@
   /* カードは上から「過去の便」「主ブロック(状態・カウントダウン・今の列車)」「未来の便」の3段。全カード同じ比率で、行が横に揃う */
   .body{flex:1;min-height:0;display:grid;grid-template-rows:2.9rem minmax(0,1fr) 6rem;overflow:hidden}
   /* 過去の便・未来の便は同じ4等分の列: [時刻] [種別] [駅番号+行先] [4列目] */
-  .lrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;padding:0 .9rem;min-height:0;overflow:hidden;white-space:nowrap}
+  .lrow{display:grid;grid-template-columns:.75fr 1.25fr 1.5fr .75fr;align-items:center;padding:0 .9rem;min-height:0;overflow:hidden;white-space:nowrap}
   .lrow>div{display:flex;align-items:center;justify-content:center;min-width:0;text-align:center}
   .lrow .t{font-weight:700;font-variant-numeric:tabular-nums;font-size:1.35rem;line-height:1}
   .lrow .t i,.tm i{font-style:normal;font-size:.8em;color:var(--sub)}
-  .lrow .chip.type{font-size:.95rem;padding:.05rem .6rem}
+  .lrow .chip.type{font-size:.95rem;padding:.05rem .5rem;white-space:nowrap} .lrow .chip.type.k3,.lrow .chip.type.k4{font-size:.85rem}
   .lrow .c4{flex-direction:column;justify-content:center;line-height:1.1;font-size:.85rem;color:var(--sub);font-variant-numeric:tabular-nums}
   .lrow .c4 b{font-size:1rem;color:var(--text);font-weight:600}
   .lrow .c4.w b,.lrow .c4.w{color:var(--warn)}
   .lrow .sn{width:1.5rem;height:1.5rem}.lrow .sn i{font-size:.5rem}.lrow .sn b{font-size:.8rem}
-  .lrow .dst,.lrow .dst.s1,.lrow .dst.s2,.lrow .dst.s3{font-size:1.05rem;font-weight:400}
+  .lrow .dst,.lrow .dst.s1,.lrow .dst.s2{font-size:1.05rem;font-weight:400} .lrow .dst.s3{font-size:.95rem;font-weight:400}
+  .lrow>div:nth-child(3){flex-wrap:wrap}
   .past{border-bottom:1px solid var(--line);opacity:.6}
   .past .c4,.past .c4 b{color:var(--bad)}
   .main{min-height:0;display:grid;grid-template-rows:minmax(0,.65fr) minmax(0,1.6fr) minmax(0,1.35fr);padding:0 .9rem;border-bottom:1px solid var(--line)}
@@ -64,10 +65,13 @@
   .trrow>div{display:flex;align-items:center;justify-content:center;min-width:0;text-align:center;flex-wrap:wrap}
   .tm{font-size:3rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
   .tmc{flex-direction:column;flex-wrap:nowrap!important;gap:.1rem}
-  .trrow .chip.type{font-size:1.65rem;padding:.25rem 1rem}
+  .trrow .chip.type{font-size:1.65rem;padding:.25rem .9rem;white-space:nowrap}
+  .trrow .chip.type.k2{font-size:1.45rem;padding:.25rem .7rem} .trrow .chip.type.k3{font-size:1.25rem;padding:.25rem .6rem} .trrow .chip.type.k4{font-size:1.1rem;padding:.25rem .6rem}
   .dl{font-size:1.2rem;font-weight:700} .dl.late{color:var(--warn)} .dl.ontime{color:var(--ok)}
-  .dst{font-weight:800;line-height:1.15;overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap;min-width:0;flex:0 1 auto}
-  .trrow>div:last-child{flex-wrap:nowrap}
+  .dst{font-weight:800;line-height:1.15;max-width:100%;white-space:nowrap;min-width:0;flex:0 1 auto}   /* 省略(…)はしない。入らない時は列内で折り返す */
+  .trrow>div:last-child{flex-wrap:wrap;row-gap:.1rem}
+  .sub{display:block;width:100%;font-size:.85rem;color:var(--sub)}
+  .dl.cars{color:var(--sub);font-weight:600}
   .dst.s1{font-size:1.9rem} .dst.s2{font-size:1.55rem} .dst.s3{font-size:1.25rem}
   .dst.dir{font-weight:400;color:var(--sub)}
   .sn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;margin-right:.35rem;line-height:1;flex:none}
@@ -118,7 +122,7 @@
   ];
   // 列車種別チップの色。見分けやすさのための表示上の選択で、各鉄道会社の公式の色ではない。
   var TYPE_COLOR = {
-    '各駅停車': ['#1f6fc2', '#fff'],
+    '各停': ['#1f6fc2', '#fff'],
     '準急': ['#1e8e3e', '#fff'], '通勤準急': ['#1e8e3e', '#fff'],
     '急行': ['#f0a000', '#10161e'], '通勤急行': ['#f0a000', '#10161e'],
     '快速': ['#e04a0c', '#fff'], '通勤快速': ['#e04a0c', '#fff'],
@@ -132,6 +136,37 @@
     SO: ['#0b2f6b', '#fff'], SH: ['#8b3fa0', '#fff'], TJ: ['#004098', '#fff'], SI: ['#ef810f', '#fff'], SS: ['#0099cc', '#fff'],
     TR: ['#0a58a8', '#fff'], JB: ['#ffd400', '#10161e'] };
   var MISSED_KEEP_MS = 60 * 60 * 1000;   // 間に合わなくなった列車を、直前の1本として出すために残す期間
+
+
+  // ---- 副都心線 渋谷方面(fuku_s)の東急線内の種別・相鉄線内の補足・両数 ----------------------
+  // ODPT には東急線内の種別も両数も無いため、公式の時刻表から読み取った表を埋め込む。
+  // 東京メトロ公式PDF F11 渋谷方面から読み取ったもの。desk-display.html と同じデータ(そのままコピー)。
+  // 形式: 'HHMM,種別,行先,両数' を ';' でつなぐ。HHMM→分は、時が4未満なら+24時間(0時台は 24xx と書いてあるのでそのまま 時*60+分)。
+  // 時刻表が改正されて同じ分の列車が見つからない時は、APIの種別をそのまま使い、両数は不明として扱う。
+  var TIMETABLE = {
+    wd: '0511,各,無,8;0529,各,無,8;0538,急,無,10;0551,急,無,8;0557,各,無,8;0604,各,無,8;0613,急,無,10;0620,各,無,8;0631,各,無,8;0639,各,無,8;0643,急特,湘,10;0652,各,無,8;0657,各,無,8;0706,各,無,8;0714,急特,湘,10;0721,各,無,8;0729,通特,無,10;0736,急特,湘,10;0745,各,無,8;0752,各,無,8;0759,各,無,8;0807,各,無,8;0813,各,無,8;0821,各,武,8;0829,各,無,8;0836,各,無,8;0839,各,武,8;0845,各,無,8;0849,各,無,8;0856,各,武,8;0900,急各,湘,10;0907,各,無,8;0913,急,無,8;0920,急各,谷,10;0925,各,無,8;0927,急,無,10;0937,急,武,10;0943,各,無,8;0950,各,無,8;0958,各,無,8;1007,各,武,8;1017,急,無,8;1022,各,無,8;1028,急,無,8;1037,各,無,8;1043,急,無,10;1052,各,無,8;1058,各,無,8;1105,急,武,10;1107,各,無,8;1112,急,無,8;1122,各,無,8;1128,各,無,8;1135,急各,湘,10;1137,各,無,8;1142,急,無,8;1152,各,無,8;1158,各,無,8;1205,急各,湘,10;1207,各,無,8;1212,急,無,8;1222,各,無,8;1228,各,無,8;1235,急各,湘,10;1237,各,無,8;1242,急,無,8;1252,各,無,8;1258,各,無,8;1305,急各,湘,10;1307,各,無,8;1312,急,無,8;1322,各,無,8;1328,各,無,8;1335,急各,湘,10;1337,各,無,8;1342,急,無,10;1352,各,無,8;1358,各,無,8;1405,急各,湘,10;1407,各,無,8;1412,急,無,8;1422,各,無,8;1428,各,無,8;1435,急各,湘,10;1437,各,無,8;1442,急,無,8;1452,各,無,8;1458,各,無,8;1505,急各,湘,10;1507,各,無,8;1512,急,無,8;1522,各,無,8;1528,急,無,8;1535,急各,湘,10;1539,各,無,8;1542,急,無,10;1552,急,無,8;1558,各,無,8;1602,急,無,10;1609,各,無,8;1614,各,無,8;1618,急,無,10;1628,各,無,8;1631,急,無,8;1639,急各,湘,10;1644,急,無,10;1649,各,無,8;1655,急各,谷,10;1658,各,無,8;1702,急,無,10;1712,急特,湘,10;1718,急,無,10;1727,急各,湘,10;1730,各,無,8;1733,急,無,8;1742,急各,湘,10;1748,各,無,8;1758,各,無,8;1803,急,無,8;1812,急特,湘,10;1818,各,武,8;1825,各,無,8;1828,急各,湘,10;1832,急,無,8;1842,急特,湘,10;1848,各,無,8;1857,通特,無,10;1907,急,無,8;1912,急特,湘,10;1918,各,無,8;1927,急各,湘,10;1933,急,無,8;1942,急各,湘,10;1948,各,無,8;1957,急各,湘,10;2002,急,無,8;2013,各,無,8;2018,各,武,8;2027,各,無,8;2033,急,無,10;2041,急各,湘,10;2048,急,武,10;2057,各,無,8;2103,急,無,10;2111,急各,湘,10;2118,各,武,8;2127,各,無,8;2133,急各,湘,10;2142,各,無,8;2148,各,無,8;2157,各,無,8;2203,通特,無,10;2212,各,無,8;2223,急各,湘,10;2228,各,無,8;2237,急,武,10;2243,各,無,8;2248,急特,海,10;2258,各,無,8;2302,通特,無,10;2308,各,武,8;2314,各,無,8;2322,各,菊,8;2331,各,無,8;2339,各,武,8;2348,各,横,8;2356,各,菊,8;2406,各,元,8;2420,,渋,8',
+    hd: '0511,各,無,8;0529,各,無,8;0539,各,無,8;0551,各,無,8;0556,各,無,8;0607,各,無,8;0611,急,無,10;0621,各,無,8;0627,各,無,8;0639,特,無,10;0647,各,無,8;0658,各,無,8;0704,特,無,10;0713,急,無,10;0721,各,無,8;0730,急各,湘,10;0736,各,無,8;0742,急,無,8;0751,各,無,8;0801,急,無,8;0806,急各,湘,10;0809,各,無,8;0812,急,無,8;0821,各,無,8;0827,急,無,8;0836,急各,谷,10;0840,各,無,8;0843,急,無,10;0852,各,無,8;0858,急,無,10;0907,急各,湘,10;0910,各,無,8;0912,急,無,10;0922,各,無,8;0928,急,無,10;0937,急各,湘,10;0943,急,無,10;0951,各,無,8;0954,急,無,8;0957,急各,湘,10;1005,各,無,8;1013,急,無,10;1022,各,無,8;1028,急,無,10;1035,各,無,8;1037,急各,湘,10;1043,急,無,8;1052,各,無,8;1058,各,無,8;1105,急各,湘,10;1107,各,無,8;1113,急,無,8;1122,各,無,8;1128,各,無,8;1135,急各,湘,10;1137,各,無,8;1143,急,無,10;1152,各,無,8;1158,各,無,8;1205,急各,湘,10;1207,各,無,8;1213,急,無,10;1222,各,無,8;1228,各,無,8;1235,急各,湘,10;1237,各,無,8;1243,急,無,10;1252,各,無,8;1258,各,無,8;1305,急各,湘,10;1307,各,無,8;1313,急,無,10;1322,各,無,8;1328,各,無,8;1335,急各,湘,10;1337,各,無,8;1343,急,無,8;1352,各,無,8;1358,各,無,8;1405,急各,湘,10;1407,各,無,8;1413,急,無,8;1422,各,無,8;1428,各,無,8;1435,急各,湘,10;1437,各,無,8;1443,急,無,10;1452,各,無,8;1458,各,無,8;1505,急各,湘,10;1507,各,無,8;1513,急,無,10;1522,各,無,8;1528,各,無,8;1535,急各,湘,10;1537,各,無,8;1543,急,無,10;1552,各,無,8;1558,各,無,8;1605,急各,海,10;1607,各,無,8;1613,急,無,10;1620,各,無,8;1625,各,無,8;1628,急,無,8;1636,各,無,8;1643,急,無,8;1649,急各,湘,10;1652,各,無,8;1658,急,無,10;1707,各,無,8;1713,急,無,8;1720,急各,湘,10;1723,各,無,8;1728,急,無,10;1739,各,無,8;1743,急各,湘,10;1752,各,無,8;1755,各,無,8;1802,急,無,8;1807,各,無,8;1813,急,無,10;1821,急特,海,10;1823,各,無,8;1828,急,無,10;1836,各,菊,8;1839,急各,湘,10;1846,急,無,10;1852,各,無,8;1858,各,無,8;1903,急特,海,10;1913,各,無,8;1921,急,無,10;1924,各,無,8;1929,各,無,8;1933,急各,湘,10;1943,各,無,8;1951,各,無,8;2003,各,無,8;2013,各,無,8;2020,急,無,10;2025,急各,湘,10;2028,各,無,8;2036,急,武,8;2043,各,無,8;2052,急,無,10;2058,各,無,8;2103,急,武,10;2111,各,無,8;2122,各,無,8;2131,急各,湘,10;2142,各,無,8;2153,各,無,8;2206,各,無,8;2212,急特,海,10;2222,各,無,8;2227,急,無,10;2236,各,無,8;2243,急,無,10;2255,急,武,10;2301,各,無,8;2311,特,横,10;2320,急特,海,10;2328,各,無,8;2336,各,菊,8;2345,各,横,8;2354,各,菊,8;2404,各,元,8;2420,,渋,8'
+  };   // wd=平日、hd=土曜・休日
+  // 凡例(PDFより): 種別
+  // 発車標に出す種別名(desk-display.html と同じ。表示時に「各駅停車」は「各停」に直す)
+  var TT_LABEL = { '各': '各駅停車', '急': '急行', '急各': '急行', '急特': '急行', '通特': '通勤特急', '特': '特急' };
+  // 補足欄(相鉄線内の種別)。「終点まで各駅」は出さないので、使う時に「各」は除く。
+  var TT_SUB = { '各': '終点まで各駅', '急各': '相鉄線内各停', '急特': '相鉄線内特急' };
+  // 埋め込み表を {wd:{分:{code,cars}}, hd:{…}} に展開する
+  function parseEmbed(str) {
+    var o = {}, recs = str ? str.split(';') : [], i, f;
+    for (i = 0; i < recs.length; i++) {
+      f = recs[i].split(',');
+      if (f.length < 3 || !f[0]) { continue; }
+      o[+f[0].substr(0, 2) * 60 + +f[0].substr(2, 2)] = { code: f[1], cars: f[3] ? +f[3] : 0 };
+    }
+    return o;
+  }
+  var EMBED = { wd: parseEmbed(TIMETABLE.wd), hd: parseEmbed(TIMETABLE.hd) };
+  // 渋谷方面の時だけ使う。和光市方面(fuku_w)は、東急線内の種別のデータが無いのでAPIの種別のまま。
+  var EMBED_BOARD = 'fuku_s';
+  // 両数ごとの余裕(分)。利用者の指定による仮置き値。8両はホーム上の移動が短いため1分。10両・不明は MARGIN_MIN。
+  var MARGIN_BY_CARS = { 8: 1, 10: 2 };
 
   var TT_RELOAD_MS = 60 * 60 * 1000, TT_RETRY_MS = 60 * 1000, LIVE_MS = 30 * 1000, LIVE_STALE_MS = 180 * 1000, PAGE_RELOAD_MS = 6 * 3600 * 1000;
 
@@ -172,20 +207,24 @@
   function buildTrains(b, now, walk, delays) {
     var tb = TT && TT.boards && TT.boards[b.id];
     if (!tb || tb.error) { return null; }
-    var sd = new Date(now - 4 * 3600 * 1000), out = [], k, d, list, base, i, e, dl, dep, ls, lf, today = ymd(new Date(now));
-    var marginMs = MARGIN_MIN * 60000;
+    var sd = new Date(now - 4 * 3600 * 1000), out = [], k, d, list, hol, em, marginMs, ty, sub, cars, base, i, e, dl, dep, ls, lf, today = ymd(new Date(now));
+    var isEmbed = b.id === EMBED_BOARD;
     for (k = 0; k < 2; k++) {
       d = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate() + k);
-      list = isHolidayDate(d) ? tb.hd : tb.wd; base = d.getTime();
+      hol = isHolidayDate(d); list = hol ? tb.hd : tb.wd; base = d.getTime();
       for (i = 0; i < (list || []).length; i++) {
         e = list[i];
+        em = isEmbed ? (hol ? EMBED.hd : EMBED.wd)[e[0]] : null;           // 同じ日種別・同じ分の公式データ
+        ty = e[1]; sub = ''; cars = 0;
+        if (em) { ty = TT_LABEL[em.code] || '各停'; sub = em.code === '各' ? '' : (TT_SUB[em.code] || ''); cars = em.cars; }
+        marginMs = (MARGIN_BY_CARS[cars] != null ? MARGIN_BY_CARS[cars] : MARGIN_MIN) * 60000;
         dl = (delays && e[3] != null && delays[e[3]] != null) ? delays[e[3]] : null;
         dep = base + e[0] * 60000 + (dl || 0) * 1000;                   // 見込み出発 = 時刻表 + 遅れ
         // 出る時刻は分未満を切り捨てる(安全側。表示の HH:MM と、あと何秒かが食い違わない)
         ls = Math.floor((dep - (walk.slow * 60000 + marginMs)) / 60000) * 60000;
         lf = Math.floor((dep - (walk.fast * 60000 + marginMs)) / 60000) * 60000;
         if (dep <= now - MISSED_KEEP_MS) { continue; }                   // 1時間以上前に出た列車は捨てる(直前の1本の表示用に、それまでは残す)
-        out.push({ sched: base + e[0] * 60000, dep: dep, type: e[1], dest: e[2], no: e[3], code: e[4] || null, delaySec: dl, ls: ls, lf: lf,
+        out.push({ sched: base + e[0] * 60000, dep: dep, type: ty, sub: sub, cars: cars, dest: e[2], no: e[3], code: e[4] || null, delaySec: dl, ls: ls, lf: lf,
                    next: ymd(new Date(base + e[0] * 60000)) !== today });
       }
     }
@@ -208,9 +247,11 @@
   var LINE_TYPE_BOARDS = { fuku_s: 1, fuku_w: 1 };
   function typeChip(t, b) {
     if (!t.type) { return ''; }
-    var o = (b && LINE_TYPE_BOARDS[b.id]) ? LINE_TYPE_COLOR[t.type] : null;
-    var c = o || TYPE_COLOR[t.type] || TYPE_UNKNOWN;
-    return '<span class="chip type" style="background:' + c[0] + ';color:' + c[1] + ';border:' + (o && o[3] ? o[3] : 1) + 'px solid ' + (o ? o[2] : c[0]) + '">' + esc(t.type) + '</span>';
+    var nm = t.type === '各駅停車' ? '各停' : t.type;                 // 表示は「各停」に統一
+    var o = (b && LINE_TYPE_BOARDS[b.id]) ? LINE_TYPE_COLOR[nm] : null;
+    var c = o || TYPE_COLOR[nm] || TYPE_UNKNOWN;
+    var len = nm.length, cls = len <= 3 ? 'k1' : (len === 4 ? 'k2' : (len === 5 ? 'k3' : 'k4'));   // 長い種別名は字を小さくして全文を出す
+    return '<span class="chip type ' + cls + '" style="background:' + c[0] + ';color:' + c[1] + ';border:' + (o && o[3] ? o[3] : 1) + 'px solid ' + (o ? o[2] : c[0]) + '">' + esc(nm) + '</span>';
   }
   // 駅ナンバリングの札(英字が上、数字が下)。コードが無い・形が違う時は出さない。
   function badge(t) {
@@ -273,7 +314,7 @@
       var mn = Math.round(t.delaySec / 60);
       dl = mn >= 1 ? '<span class="dl late">+' + mn + '分遅れ</span>' : '<span class="dl ontime">定刻</span>';
     }
-    h += '<div class="trrow"><div class="tmc"><span class="tm">' + timeLabel(t) + '</span>' + dl + '</div><div>' + typeChip(t, b) + '</div><div>' + destHtml(t, b) + '</div></div></div>';
+    h += '<div class="trrow"><div class="tmc"><span class="tm">' + timeLabel(t) + '</span>' + (t.cars ? '<span class="dl cars">' + t.cars + '両</span>' : '') + dl + '</div><div class="tmc">' + typeChip(t, b) + (t.sub ? '<span class="sub">' + esc(t.sub) + '</span>' : '') + '</div><div>' + destHtml(t, b) + '</div></div></div>';
     // 3. 未来の便(ちょうど2行。過去の便と同じ4列)
     h += '<div class="fut">';
     for (var i = 1; i <= 2; i++) {
@@ -308,7 +349,7 @@
     var now = Date.now(), d = new Date(now);
     document.getElementById('time').innerHTML = p2(d.getHours()) + ':' + p2(d.getMinutes()) + '<span class="sec">:' + p2(d.getSeconds()) + '</span>';
     document.getElementById('date').textContent = d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日(' + WD[d.getDay()] + ')' + (isHolidayDate(new Date(now - 4 * 3600000)) ? ' 休日ダイヤ' : ' 平日ダイヤ');
-    document.getElementById('note').textContent = '余裕' + MARGIN_MIN + '分(ホームで待つ時間)を含む';
+    document.getElementById('note').textContent = '余裕' + MARGIN_MIN + '分(副都心線8両は' + MARGIN_BY_CARS[8] + '分)';
     var cfg = document.getElementById('cfg');
     if (!API_BASE) {
       cfg.style.display = 'flex';
