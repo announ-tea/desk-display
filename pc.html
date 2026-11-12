@@ -31,7 +31,7 @@
   .srow{flex:none;display:flex;align-items:center;gap:.6rem;white-space:nowrap}
   .chip{display:inline-block;padding:.1rem .7rem;border-radius:2rem;font-size:1.05rem;font-weight:700;color:#fff;max-width:100%;overflow:hidden;text-overflow:ellipsis}
   .chip.ok{background:var(--ok)} .chip.delay{background:var(--warn)} .chip.bad{background:var(--bad)} .chip.na{background:#7b8794}
-  .chip.type{background:#e6ebf1;color:var(--text);border:1px solid #b8c2d0;font-weight:600;margin:0 .4rem}
+  .chip.type{border:1px solid transparent;font-weight:700;margin:0 .4rem}
   .lbl{font-size:1rem;color:var(--sub)}
   .info{flex:none;font-size:1.05rem;color:var(--warn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.15rem}
   .info.bad{color:var(--bad)}
@@ -42,13 +42,25 @@
   .tr{flex:none;margin-top:.2rem;display:flex;align-items:baseline;white-space:nowrap;overflow:hidden}
   .tr .t{font-size:2.3rem;font-weight:700;font-variant-numeric:tabular-nums}
   .tr .t i{font-style:normal;font-size:1.2rem;color:var(--sub);margin-right:.2rem}
-  .tr .d{font-size:1.7rem;overflow:hidden;text-overflow:ellipsis}
+  .tr .d{font-size:1.7rem;font-weight:800;overflow:hidden;text-overflow:ellipsis}
+  .tr,.row,.miss{align-items:center}
+  .sn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;margin-right:.4rem;line-height:1;flex:none}
+  .sn i{font-style:normal;font-size:.65rem;font-weight:700}
+  .sn b{font-size:1rem;font-weight:700}
+  .row .sn{width:1.5rem;height:1.5rem;border-radius:.3rem}.row .sn i{font-size:.5rem}.row .sn b{font-size:.8rem}
+  .miss{flex:none;display:flex;white-space:nowrap;font-size:1.1rem;opacity:.55;margin-top:.2rem;overflow:hidden}
+  .miss .t{font-weight:700;width:4rem;font-variant-numeric:tabular-nums} .miss .t i{font-style:normal;font-size:.9rem}
+  .miss .d{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .miss{flex-wrap:wrap}
+  .miss .chip.type{flex:none}
+  .miss .l{flex-basis:100%;margin-left:4rem;color:var(--bad);font-variant-numeric:tabular-nums}
+  .miss .chip.type{font-size:.9rem;padding:0 .5rem}
   .dl{font-size:1.2rem;font-weight:700;margin-left:.7rem}
   .dl.late{color:var(--warn)} .dl.ontime{color:var(--ok)}
   .lv{flex:none;font-size:1.3rem;margin-top:.2rem;white-space:nowrap}
   .lv b{font-variant-numeric:tabular-nums}
   .more{flex:1;min-height:0;margin-top:.4rem;border-top:1px solid var(--line);overflow:hidden}
-  .row{display:flex;align-items:baseline;white-space:nowrap;font-size:1.2rem;padding:.25rem 0;border-bottom:1px solid #eef1f5;overflow:hidden}
+  .row{display:flex;align-items:center;white-space:nowrap;font-size:1.2rem;padding:.25rem 0;border-bottom:1px solid #eef1f5;overflow:hidden}
   .row .t{font-weight:700;width:4.2rem;font-variant-numeric:tabular-nums} .row .t i{font-style:normal;font-size:.9rem;color:var(--sub)}
   .row .d{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .row .l{color:var(--sub);margin-left:.5rem;font-variant-numeric:tabular-nums} .row .l.w{color:var(--warn)}
@@ -85,15 +97,32 @@
   // ---- 表示枠 ----------------------------------------------------------------
   // line色は各社の路線カラー。山手線の黄緑は明るいので文字だけ濃色にする。
   var BOARDS = [
-    { id: 'fuku_s',    name: '副都心線 渋谷方面',                group: '西早稲田駅', color: '#9c5e31', fg: '#fff', info: true },
-    { id: 'fuku_w',    name: '副都心線 和光市方面',              group: '西早稲田駅', color: '#9c5e31', fg: '#fff', info: true },
-    { id: 'tozai_n',   name: '東西線 西船橋方面',                group: '高田馬場駅', color: '#009bbf', fg: '#fff', info: true },
-    { id: 'tozai_k',   name: '東西線 中野方面',                  group: '高田馬場駅', color: '#009bbf', fg: '#fff', info: true },
-    { id: 'yama_in',   name: '山手線 内回り(新宿・渋谷方面)',    group: '高田馬場駅', color: '#9acd32', fg: '#10161e', info: true, loop: true },
-    { id: 'yama_out',  name: '山手線 外回り(池袋・上野方面)',    group: '高田馬場駅', color: '#9acd32', fg: '#10161e', info: true, loop: true },
-    { id: 'seibu_in',  name: '西武新宿線 西武新宿方面',          group: '高田馬場駅', color: '#0099cc', fg: '#fff', info: false },
-    { id: 'seibu_out', name: '西武新宿線 本川越・拝島方面',      group: '高田馬場駅', color: '#0099cc', fg: '#fff', info: false }
+    { id: 'fuku_s',    name: '副都心線 渋谷方面',                group: '西早稲田駅', col: 0, row: 0, color: '#9c5e31', fg: '#fff', info: true },
+    { id: 'fuku_w',    name: '副都心線 和光市方面',              group: '西早稲田駅', col: 0, row: 1, color: '#9c5e31', fg: '#fff', info: true },
+    { id: 'tozai_n',   name: '東西線 西船橋方面',                group: '高田馬場駅', col: 1, row: 0, color: '#009bbf', fg: '#fff', info: true },
+    { id: 'tozai_k',   name: '東西線 中野方面',                  group: '高田馬場駅', col: 1, row: 1, color: '#009bbf', fg: '#fff', info: true },
+    { id: 'yama_in',   name: '山手線 内回り(新宿・渋谷方面)',    group: '高田馬場駅', col: 2, row: 0, color: '#9acd32', fg: '#10161e', info: true, loop: true },
+    { id: 'yama_out',  name: '山手線 外回り(池袋・上野方面)',    group: '高田馬場駅', col: 2, row: 1, color: '#9acd32', fg: '#10161e', info: true, loop: true },
+    { id: 'seibu_in',  name: '西武新宿線 西武新宿方面',          group: '高田馬場駅', col: 3, row: 0, color: '#0099cc', fg: '#fff', info: false },
+    { id: 'seibu_out', name: '西武新宿線 本川越・拝島方面',      group: '高田馬場駅', col: 3, row: 1, color: '#0099cc', fg: '#fff', info: false }
   ];
+  // 列車種別チップの色。見分けやすさのための表示上の選択で、各鉄道会社の公式の色ではない。
+  var TYPE_COLOR = {
+    '各駅停車': ['#1f6fc2', '#fff'],
+    '準急': ['#1e8e3e', '#fff'], '通勤準急': ['#1e8e3e', '#fff'],
+    '急行': ['#f0a000', '#10161e'], '通勤急行': ['#f0a000', '#10161e'],
+    '快速': ['#e04a0c', '#fff'], '通勤快速': ['#e04a0c', '#fff'],
+    '快速急行': ['#7b3fa0', '#fff'],
+    '特急': ['#c62828', '#fff'], '通勤特急': ['#c62828', '#fff'], 'Fライナー': ['#c62828', '#fff'],
+    'S-TRAIN': ['#c62828', '#fff'], '拝島ライナー': ['#c62828', '#fff']
+  };
+  var TYPE_UNKNOWN = ['#7b8794', '#fff'];
+  // 駅ナンバリング記号の色(英字 → [背景, 文字])。路線カラーに近い値で、不明な記号は灰色。
+  var CODE_COLOR = { F: ['#9c5e31', '#fff'], T: ['#009bbf', '#fff'], TY: ['#da0442', '#fff'], MM: ['#1b3f94', '#fff'],
+    SO: ['#0b2f6b', '#fff'], SH: ['#8b3fa0', '#fff'], TJ: ['#004098', '#fff'], SI: ['#ef810f', '#fff'], SS: ['#0099cc', '#fff'],
+    TR: ['#0a58a8', '#fff'], JB: ['#ffd400', '#10161e'] };
+  var MISSED_KEEP_MS = 60 * 60 * 1000;   // 間に合わなくなった列車を、直前の1本として出すために残す期間
+
   var TT_RELOAD_MS = 60 * 60 * 1000, TT_RETRY_MS = 60 * 1000, LIVE_MS = 30 * 1000, LIVE_STALE_MS = 180 * 1000, PAGE_RELOAD_MS = 6 * 3600 * 1000;
 
   // 祝日(土日以外で休日ダイヤになる日)。desk-display.html と同じ(内閣府「国民の祝日」で照合済み)。2027年末以降は追記が必要。
@@ -145,18 +174,33 @@
         // 出る時刻は分未満を切り捨てる(安全側。表示の HH:MM と、あと何秒かが食い違わない)
         ls = Math.floor((dep - (walk.slow * 60000 + marginMs)) / 60000) * 60000;
         lf = Math.floor((dep - (walk.fast * 60000 + marginMs)) / 60000) * 60000;
-        if (lf <= now) { continue; }                                     // 急いでも間に合わない列車は出さない(遅れで予定を過ぎても、出発がまだ先なら残る)
-        out.push({ sched: base + e[0] * 60000, dep: dep, type: e[1], dest: e[2], no: e[3], delaySec: dl, ls: ls, lf: lf,
+        if (dep <= now - MISSED_KEEP_MS) { continue; }                   // 1時間以上前に出た列車は捨てる(直前の1本の表示用に、それまでは残す)
+        out.push({ sched: base + e[0] * 60000, dep: dep, type: e[1], dest: e[2], no: e[3], code: e[4] || null, delaySec: dl, ls: ls, lf: lf,
                    next: ymd(new Date(base + e[0] * 60000)) !== today });
       }
     }
     out.sort(function (a, b2) { return a.dep - b2.dep; });
-    return out.slice(0, 3);
+    // 急いでも間に合わない(lf<=now)列車は先頭側に並ぶ。その最後の1本が「直前の列車」、残りが乗れる列車。
+    var firstOk = 0;
+    while (firstOk < out.length && out[firstOk].lf <= now) { firstOk++; }
+    return { missed: firstOk > 0 ? out[firstOk - 1] : null, list: out.slice(firstOk, firstOk + 3) };
   }
 
   // ---- 表示 ---------------------------------------------------------------------
   function timeLabel(t) { var d = new Date(t.sched); return (t.next ? '<i>翌</i>' : '') + d.getHours() + ':' + p2(d.getMinutes()); }
-  function typeChip(t) { return t.type ? '<span class="chip type">' + esc(t.type) + '</span>' : ''; }
+  function typeChip(t) {
+    if (!t.type) { return ''; }
+    var c = TYPE_COLOR[t.type] || TYPE_UNKNOWN;
+    return '<span class="chip type" style="background:' + c[0] + ';color:' + c[1] + ';border-color:' + c[0] + '">' + esc(t.type) + '</span>';
+  }
+  // 駅ナンバリングの札(英字が上、数字が下)。コードが無い・形が違う時は出さない。
+  function badge(t) {
+    var m = t.dest && t.code ? /^([A-Za-z]+)(\d+)$/.exec(t.code) : null;
+    if (!m) { return ''; }
+    var c = CODE_COLOR[m[1].toUpperCase()] || ['#7b8794', '#fff'];
+    return '<span class="sn" style="background:' + c[0] + ';color:' + c[1] + '"><i>' + esc(m[1].toUpperCase()) + '</i><b>' + esc(m[2]) + '</b></span>';
+  }
+  function ms(x) { var s = Math.max(0, Math.floor(x / 1000)); return Math.floor(s / 60) + '分' + p2(s % 60) + '秒'; }
   function countdown(ms) {
     var s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), sec = s % 60;
     if (m >= 60) { return '<b>' + Math.floor(m / 60) + '</b>時間<b>' + p2(m % 60) + '</b>分<b>' + p2(sec) + '</b>秒'; }
@@ -184,7 +228,7 @@
     if (!L || L.error) { L = null; liveOk = false; }
     var st = statusOf(b, L, liveOk);
     var delays = (L && b.loop) ? L.delays : null;
-    var trains = buildTrains(b, now, walk, delays);
+    var bt = buildTrains(b, now, walk, delays), trains = bt && bt.list, missed = bt && bt.missed;
     var h = '<div class="band" style="background:' + b.color + ';color:' + b.fg + '">' + esc(b.name) + '</div><div class="body">';
     h += '<div class="srow"><span class="chip ' + st.cls + '">' + esc(st.chip) + '</span>' + (st.extra ? '<span class="lbl">' + esc(st.extra) + '</span>' : '') + '</div>';
     if (st.text) { h += '<div class="info ' + st.tcls + '">' + esc(st.text) + '</div>'; }
@@ -194,8 +238,12 @@
     }
     if (!trains.length) { h += '<div class="none">この先の列車がありません</div></div>'; return h; }
     var t = trains[0], hurry = t.ls <= now;
+    if (missed) {
+      h += '<div class="miss"><span class="t">' + timeLabel(missed) + '</span>' + typeChip(missed) + badge(missed) + '<span class="d">' + esc(missed.dest) + '</span>' +
+           '<span class="l">' + (missed.dep <= now ? '発車済み(' + ms(now - missed.dep) + '前)' : ms(now - missed.lf) + '前に間に合わなくなった') + '</span></div>';
+    }
     h += '<div class="cd' + (hurry ? ' hurry' : '') + '">あと ' + countdown((hurry ? t.lf : t.ls) - now) + 'で出発' + (hurry ? '<span class="hurrytag">急げば間に合う</span>' : '') + '</div>';
-    h += '<div class="tr"><span class="t">' + timeLabel(t) + '</span>' + typeChip(t) + '<span class="d">' + esc(t.dest) + '</span>';
+    h += '<div class="tr"><span class="t">' + timeLabel(t) + '</span>' + typeChip(t) + badge(t) + '<span class="d">' + esc(t.dest) + '</span>';
     if (b.loop && t.delaySec != null) {
       var mn = Math.round(t.delaySec / 60);
       h += mn >= 1 ? '<span class="dl late">+' + mn + '分遅れ</span>' : '<span class="dl ontime">定刻</span>';
@@ -205,7 +253,7 @@
     h += '<div class="more">';
     for (var i = 1; i < trains.length; i++) {
       var r = trains[i], rh = r.ls <= now;
-      h += '<div class="row"><span class="t">' + timeLabel(r) + '</span>' + typeChip(r) + '<span class="d">' + esc(r.dest) + '</span>' +
+      h += '<div class="row"><span class="t">' + timeLabel(r) + '</span>' + typeChip(r) + badge(r) + '<span class="d">' + esc(r.dest) + '</span>' +
            '<span class="l' + (rh ? ' w' : '') + '">' + (rh ? '急ぎ ' + hm(r.lf) : 'ゆっくり ' + hm(r.ls)) + '</span></div>';
     }
     return h + '</div></div>';
@@ -214,13 +262,13 @@
   // ---- 骨組み ---------------------------------------------------------------------
   var grid = document.getElementById('grid'), cards = {};
   function setup() {
-    var h = '', g, n = { '西早稲田駅': 0, '高田馬場駅': 0 };
+    var h = '';
     function title(name, col) {
       return '<div class="sect" style="grid-column:' + col + ';grid-row:1">' + name + '<small>徒歩' + WALK[name].slow + '分/急ぎ' + WALK[name].fast + '分</small></div>';
     }
     h += title('西早稲田駅', '1') + title('高田馬場駅', '2 / 5');
     BOARDS.forEach(function (b) {
-      var i = n[b.group]++, pos = b.group === '西早稲田駅' ? 'grid-column:1;grid-row:' + (2 + i) : 'grid-column:' + (2 + (i % 3)) + ';grid-row:' + (2 + Math.floor(i / 3));
+      var pos = 'grid-column:' + (1 + b.col) + ';grid-row:' + (2 + b.row);   // 1列=1路線、上下に2方向
       h += '<div class="card" id="c_' + b.id + '" style="' + pos + '"></div>';
     });
     h += '<div id="cfg">API未設定<br>pc.html 先頭の API_BASE に、中継サーバー(Worker)のURLを設定してください</div>';
