@@ -27,45 +27,55 @@
   .card{background:var(--panel);border:1px solid var(--line);border-radius:.9rem;overflow:hidden;min-height:0;
     display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(16,24,40,.06)}
   .band{flex:none;padding:.35rem .9rem;font-size:1.45rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .body{flex:1;min-height:0;padding:.5rem .9rem .4rem;display:flex;flex-direction:column;overflow:hidden}
-  .srow{flex:none;display:flex;align-items:center;gap:.6rem;white-space:nowrap}
-  .chip{display:inline-block;padding:.1rem .7rem;border-radius:2rem;font-size:1.05rem;font-weight:700;color:#fff;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  /* カードは上から「過去の便」「主ブロック(状態・カウントダウン・今の列車)」「未来の便」の3段。全カード同じ比率で、行が横に揃う */
+  .body{flex:1;min-height:0;display:grid;grid-template-rows:2.9rem minmax(0,1fr) 6rem;overflow:hidden}
+  /* 過去の便・未来の便は同じ4等分の列: [時刻] [種別] [駅番号+行先] [4列目] */
+  .lrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;padding:0 .9rem;min-height:0;overflow:hidden;white-space:nowrap}
+  .lrow>div{display:flex;align-items:center;justify-content:center;min-width:0;text-align:center}
+  .lrow .t{font-weight:700;font-variant-numeric:tabular-nums;font-size:1.35rem;line-height:1}
+  .lrow .t i,.tm i{font-style:normal;font-size:.8em;color:var(--sub)}
+  .lrow .chip.type{font-size:.95rem;padding:.05rem .6rem}
+  .lrow .c4{flex-direction:column;justify-content:center;line-height:1.1;font-size:.85rem;color:var(--sub);font-variant-numeric:tabular-nums}
+  .lrow .c4 b{font-size:1rem;color:var(--text);font-weight:600}
+  .lrow .c4.w b,.lrow .c4.w{color:var(--warn)}
+  .lrow .sn{width:1.5rem;height:1.5rem}.lrow .sn i{font-size:.5rem}.lrow .sn b{font-size:.8rem}
+  .lrow .dst,.lrow .dst.s1,.lrow .dst.s2,.lrow .dst.s3{font-size:1.05rem;font-weight:400}
+  .past{border-bottom:1px solid var(--line);opacity:.6}
+  .past .c4,.past .c4 b{color:var(--bad)}
+  .main{min-height:0;display:grid;grid-template-rows:minmax(0,.65fr) minmax(0,1.6fr) minmax(0,1.35fr);padding:0 .9rem;border-bottom:1px solid var(--line)}
+  .srow{display:grid;grid-template-columns:1fr 2fr;gap:.7rem;align-items:center;min-height:0;overflow:hidden}
+  .chip{display:inline-block;padding:.15rem .7rem;border-radius:1rem;font-size:1.05rem;font-weight:700;color:#fff;line-height:1.15;text-align:center;max-width:100%}
+  .srow .chip{justify-self:start;overflow:hidden}
   .chip.ok{background:var(--ok)} .chip.delay{background:var(--warn)} .chip.bad{background:var(--bad)} .chip.na{background:#7b8794}
-  .chip.type{border:1px solid transparent;font-weight:700;margin:0 .4rem}
-  .lbl{font-size:1rem;color:var(--sub)}
-  .info{flex:none;font-size:1.05rem;color:var(--warn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.15rem}
-  .info.bad{color:var(--bad)}
-  .cd{flex:none;margin-top:.3rem;font-size:1.5rem;color:var(--sub);white-space:nowrap}
-  .cd b{font-size:3.6rem;color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;line-height:1;margin:0 .1rem}
-  .cd.hurry b,.cd.hurry{color:var(--warn)}
-  .hurrytag{display:block;font-size:1.3rem;font-weight:700;color:var(--warn);margin-top:.1rem}
-  .tr{flex:none;margin-top:.2rem;display:flex;align-items:baseline;white-space:nowrap;overflow:hidden}
-  .tr .t{font-size:2.3rem;font-weight:700;font-variant-numeric:tabular-nums}
-  .tr .t i{font-style:normal;font-size:1.2rem;color:var(--sub);margin-right:.2rem}
-  .tr .d{font-size:1.7rem;font-weight:800;overflow:hidden;text-overflow:ellipsis}
-  .tr,.row,.miss{align-items:center}
-  .sn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;margin-right:.4rem;line-height:1;flex:none}
+  .chip.type{border:1px solid transparent;font-weight:700}
+  .stx{font-size:1.25rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .stx.delay{color:var(--warn)} .stx.bad{color:var(--bad)}
+  .cdrow{display:grid;grid-template-columns:1fr 1px 1fr;align-items:center;min-height:0}
+  .cdrow .vl{width:1px;height:70%;background:var(--line)}
+  .cdl{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+  .cdl .cap{font-size:1.1rem;color:var(--sub);white-space:nowrap}
+  .cdl .num{font-size:3.8rem;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cdl .num small{font-size:1.45rem;font-weight:400;color:var(--sub);margin:0 .1rem}
+  .cdl.hurry .num,.cdl.hurry .cap{color:var(--warn)} .cdl.hurry .cap{font-weight:700;font-size:1.1rem}
+  .cdr{display:grid;grid-template-columns:auto auto;justify-content:center;column-gap:1rem;row-gap:.3rem;font-size:1.9rem;align-items:baseline;white-space:nowrap}
+  .cdr .k{color:var(--sub);font-size:1.2rem} .cdr .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .cdr .off{opacity:.4;text-decoration:line-through}
+  .trrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;min-height:0}
+  .trrow>div{display:flex;align-items:center;justify-content:center;min-width:0;text-align:center;flex-wrap:wrap}
+  .tm{font-size:3rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+  .tmc{flex-direction:column;flex-wrap:nowrap!important;gap:.1rem}
+  .trrow .chip.type{font-size:1.65rem;padding:.25rem 1rem}
+  .dl{font-size:1.2rem;font-weight:700} .dl.late{color:var(--warn)} .dl.ontime{color:var(--ok)}
+  .dst{font-weight:800;line-height:1.15;overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap;min-width:0;flex:0 1 auto}
+  .trrow>div:last-child{flex-wrap:nowrap}
+  .dst.s1{font-size:1.9rem} .dst.s2{font-size:1.55rem} .dst.s3{font-size:1.25rem}
+  .dst.dir{font-weight:400;color:var(--sub)}
+  .sn{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:.4rem;margin-right:.35rem;line-height:1;flex:none}
   .sn i{font-style:normal;font-size:.65rem;font-weight:700}
   .sn b{font-size:1rem;font-weight:700}
-  .row .sn{width:1.5rem;height:1.5rem;border-radius:.3rem}.row .sn i{font-size:.5rem}.row .sn b{font-size:.8rem}
-  .miss{flex:none;display:flex;white-space:nowrap;font-size:1.1rem;opacity:.55;margin-top:.2rem;overflow:hidden}
-  .miss .t{font-weight:700;width:4rem;font-variant-numeric:tabular-nums} .miss .t i{font-style:normal;font-size:.9rem}
-  .miss .d{overflow:hidden;text-overflow:ellipsis;min-width:0}
-  .miss{flex-wrap:wrap}
-  .miss .chip.type{flex:none}
-  .miss .l{flex-basis:100%;margin-left:4rem;color:var(--bad);font-variant-numeric:tabular-nums}
-  .miss .chip.type{font-size:.9rem;padding:0 .5rem}
-  .dl{font-size:1.2rem;font-weight:700;margin-left:.7rem}
-  .dl.late{color:var(--warn)} .dl.ontime{color:var(--ok)}
-  .lv{flex:none;font-size:1.3rem;margin-top:.2rem;white-space:nowrap}
-  .lv b{font-variant-numeric:tabular-nums}
-  .more{flex:1;min-height:0;margin-top:.4rem;border-top:1px solid var(--line);overflow:hidden}
-  .row{display:flex;align-items:center;white-space:nowrap;font-size:1.2rem;padding:.25rem 0;border-bottom:1px solid #eef1f5;overflow:hidden}
-  .row .t{font-weight:700;width:4.2rem;font-variant-numeric:tabular-nums} .row .t i{font-style:normal;font-size:.9rem;color:var(--sub)}
-  .row .d{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
-  .row .l{color:var(--sub);margin-left:.5rem;font-variant-numeric:tabular-nums} .row .l.w{color:var(--warn)}
-  .row .chip.type{font-size:.95rem;padding:0 .5rem}
-  .none{flex:1;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--sub);text-align:center}
+  .fut{display:grid;grid-template-rows:repeat(2,minmax(0,1fr));min-height:0;overflow:hidden}
+  .fut .lrow+.lrow{border-top:1px solid #eef1f5}
+  .none{grid-row:2/4;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--sub);text-align:center}
   #cfg{grid-column:1/-1;grid-row:2/4;display:none;align-items:center;justify-content:center;text-align:center;font-size:2.4rem;color:var(--bad);line-height:1.7}
   footer{flex:none;height:1.8rem;display:flex;justify-content:space-between;font-size:1rem;color:var(--sub);padding-top:.4rem}
 </style>
@@ -101,8 +111,8 @@
     { id: 'fuku_w',    name: '副都心線 和光市方面',              group: '西早稲田駅', col: 0, row: 1, color: '#9c5e31', fg: '#fff', info: true },
     { id: 'tozai_n',   name: '東西線 西船橋方面',                group: '高田馬場駅', col: 1, row: 0, color: '#009bbf', fg: '#fff', info: true },
     { id: 'tozai_k',   name: '東西線 中野方面',                  group: '高田馬場駅', col: 1, row: 1, color: '#009bbf', fg: '#fff', info: true },
-    { id: 'yama_in',   name: '山手線 内回り(新宿・渋谷方面)',    group: '高田馬場駅', col: 2, row: 0, color: '#9acd32', fg: '#10161e', info: true, loop: true },
-    { id: 'yama_out',  name: '山手線 外回り(池袋・上野方面)',    group: '高田馬場駅', col: 2, row: 1, color: '#9acd32', fg: '#10161e', info: true, loop: true },
+    { id: 'yama_in',   name: '山手線 内回り(新宿・渋谷方面)', short: '内回り',    group: '高田馬場駅', col: 2, row: 0, color: '#9acd32', fg: '#10161e', info: true, loop: true },
+    { id: 'yama_out',  name: '山手線 外回り(池袋・上野方面)', short: '外回り',    group: '高田馬場駅', col: 2, row: 1, color: '#9acd32', fg: '#10161e', info: true, loop: true },
     { id: 'seibu_in',  name: '西武新宿線 西武新宿方面',          group: '高田馬場駅', col: 3, row: 0, color: '#0099cc', fg: '#fff', info: false },
     { id: 'seibu_out', name: '西武新宿線 本川越・拝島方面',      group: '高田馬場駅', col: 3, row: 1, color: '#0099cc', fg: '#fff', info: false }
   ];
@@ -188,10 +198,19 @@
 
   // ---- 表示 ---------------------------------------------------------------------
   function timeLabel(t) { var d = new Date(t.sched); return (t.next ? '<i>翌</i>' : '') + d.getHours() + ':' + p2(d.getMinutes()); }
-  function typeChip(t) {
+  // 副都心線の2枚だけ、東横線直通の種別表示(急行=赤、特急=橙、通勤特急=白地に橙枠)に寄せる。
+  // 東急東横線の種別表示に寄せた色。記憶に基づく値で、公式資料とは未照合([背景, 文字, 枠色])
+  var LINE_TYPE_COLOR = {
+    '急行': ['#e60012', '#fff', '#e60012'],
+    '特急': ['#f39800', '#fff', '#f39800'],
+    '通勤特急': ['#fff', '#f39800', '#f39800', 2]
+  };
+  var LINE_TYPE_BOARDS = { fuku_s: 1, fuku_w: 1 };
+  function typeChip(t, b) {
     if (!t.type) { return ''; }
-    var c = TYPE_COLOR[t.type] || TYPE_UNKNOWN;
-    return '<span class="chip type" style="background:' + c[0] + ';color:' + c[1] + ';border-color:' + c[0] + '">' + esc(t.type) + '</span>';
+    var o = (b && LINE_TYPE_BOARDS[b.id]) ? LINE_TYPE_COLOR[t.type] : null;
+    var c = o || TYPE_COLOR[t.type] || TYPE_UNKNOWN;
+    return '<span class="chip type" style="background:' + c[0] + ';color:' + c[1] + ';border:' + (o && o[3] ? o[3] : 1) + 'px solid ' + (o ? o[2] : c[0]) + '">' + esc(t.type) + '</span>';
   }
   // 駅ナンバリングの札(英字が上、数字が下)。コードが無い・形が違う時は出さない。
   function badge(t) {
@@ -203,24 +222,29 @@
   function ms(x) { var s = Math.max(0, Math.floor(x / 1000)); return Math.floor(s / 60) + '分' + p2(s % 60) + '秒'; }
   function countdown(ms) {
     var s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), sec = s % 60;
-    if (m >= 60) { return '<b>' + Math.floor(m / 60) + '</b>時間<b>' + p2(m % 60) + '</b>分<b>' + p2(sec) + '</b>秒'; }
-    return '<b>' + m + '</b>分<b>' + p2(sec) + '</b>秒';
+    if (m >= 60) { return Math.floor(m / 60) + '<small>時間</small>' + p2(m % 60) + '<small>分</small>'; }
+    return m + '<small>分</small>' + p2(sec) + '<small>秒</small>';
   }
 
+  // 状態チップ(左)と、その横の説明(右)。長い文は右に回す(左は全体の1/3の幅しかないため)。
   function statusOf(b, L, liveOk) {
-    var s = { chip: '', cls: 'na', text: '', tcls: '', extra: '' };
-    if (!liveOk) {
-      s.chip = '運行情報を取得できません・時刻表のみ';
-      if (b.loop) { s.extra = '時刻表のみ'; }
-      return s;
-    }
-    if (b.loop && L.delays) { s.extra = '在線の遅れを反映'; }
-    if (L.info == null) { s.chip = '時刻表のみ(運行情報の提供なし)'; return s; }
+    var s = { chip: '', cls: 'na', text: '', tcls: '' };
+    if (!liveOk) { s.chip = '運行情報を取得できません'; s.text = '時刻表のみ'; return s; }
+    var extra = (b.loop && L.delays) ? '在線の遅れを反映' : '';
+    if (L.info == null) { s.chip = '時刻表のみ'; s.text = '(運行情報の提供なし)'; return s; }
     if (L.info.status === 'suspended') { s.chip = '運転見合わせ'; s.cls = 'bad'; s.text = L.info.text; s.tcls = 'bad'; }
-    else if (L.info.status === 'delay') { s.chip = '遅れあり'; s.cls = 'delay'; s.text = L.info.text; }
-    else { s.chip = '平常運転'; s.cls = 'ok'; }
+    else if (L.info.status === 'delay') { s.chip = '遅れあり'; s.cls = 'delay'; s.text = L.info.text || extra; s.tcls = 'delay'; }
+    else { s.chip = '平常運転'; s.cls = 'ok'; s.text = extra; }
     return s;
   }
+
+  // 行先の列: 駅番号札 + 行先名。文字数で字の大きさを変える(長い名前は小さく)。行先が無い時は方向名(b.short)。
+  function destHtml(t, b, bold) {
+    if (!t.dest) { return b.short ? '<span class="dst dir s2">' + esc(b.short) + '</span>' : ''; }
+    var n = t.dest.length, sz = n <= 3 ? 's1' : (n === 4 ? 's2' : 's3');   // 4文字以上は字を小さくして、駅番号札と1行に収める
+    return badge(t) + '<span class="dst ' + sz + '">' + esc(t.dest) + '</span>';
+  }
+  function emptyPast() { return '<div class="past lrow"><div style="grid-column:1/-1">—</div></div>'; }
 
   function cardHtml(b, now) {
     var walk = WALK[b.group], liveOk = !!LIVE && (now - LIVE_AT) <= LIVE_STALE_MS;
@@ -230,31 +254,34 @@
     var delays = (L && b.loop) ? L.delays : null;
     var bt = buildTrains(b, now, walk, delays), trains = bt && bt.list, missed = bt && bt.missed;
     var h = '<div class="band" style="background:' + b.color + ';color:' + b.fg + '">' + esc(b.name) + '</div><div class="body">';
-    h += '<div class="srow"><span class="chip ' + st.cls + '">' + esc(st.chip) + '</span>' + (st.extra ? '<span class="lbl">' + esc(st.extra) + '</span>' : '') + '</div>';
-    if (st.text) { h += '<div class="info ' + st.tcls + '">' + esc(st.text) + '</div>'; }
-    if (trains === null) {
-      h += '<div class="none">' + (TT || TT_FAILED ? '時刻表を取得できません' : '時刻表を読み込み中…') + '</div></div>';
-      return h;
-    }
-    if (!trains.length) { h += '<div class="none">この先の列車がありません</div></div>'; return h; }
-    var t = trains[0], hurry = t.ls <= now;
+    // 1. 過去の便(1行。高さは常に確保する)
     if (missed) {
-      h += '<div class="miss"><span class="t">' + timeLabel(missed) + '</span>' + typeChip(missed) + badge(missed) + '<span class="d">' + esc(missed.dest) + '</span>' +
-           '<span class="l">' + (missed.dep <= now ? '発車済み(' + ms(now - missed.dep) + '前)' : ms(now - missed.lf) + '前に間に合わなくなった') + '</span></div>';
+      h += '<div class="past lrow"><div><span class="t">' + timeLabel(missed) + '</span></div><div>' + typeChip(missed, b) + '</div><div>' + destHtml(missed, b) + '</div>' +
+           '<div class="c4"><span>' + (missed.dep <= now ? '発車から' : '締切から') + '</span><b>' + ms(now - (missed.dep <= now ? missed.dep : missed.lf)) + '</b></div></div>';
+    } else { h += emptyPast(); }
+    // 2. 主ブロック
+    h += '<div class="main"><div class="srow"><span class="chip ' + st.cls + '">' + esc(st.chip) + '</span><span class="stx ' + st.tcls + '">' + esc(st.text) + '</span></div>';
+    if (trains === null) {
+      return h + '<div class="none">' + (TT || TT_FAILED ? '時刻表を取得できません' : '時刻表を読み込み中…') + '</div></div><div class="fut"></div></div>';
     }
-    h += '<div class="cd' + (hurry ? ' hurry' : '') + '">あと ' + countdown((hurry ? t.lf : t.ls) - now) + 'で出発' + (hurry ? '<span class="hurrytag">急げば間に合う</span>' : '') + '</div>';
-    h += '<div class="tr"><span class="t">' + timeLabel(t) + '</span>' + typeChip(t) + badge(t) + '<span class="d">' + esc(t.dest) + '</span>';
+    if (!trains.length) { return h + '<div class="none">この先の列車がありません</div></div><div class="fut"></div></div>'; }
+    var t = trains[0], hurry = t.ls <= now;
+    h += '<div class="cdrow"><div class="cdl' + (hurry ? ' hurry' : '') + '"><span class="cap">' + (hurry ? '急げば間に合う' : '出発まで') + '</span><span class="num">' + countdown((hurry ? t.lf : t.ls) - now) + '</span></div><div class="vl"></div>' +
+         '<div class="cdr"><span class="k">ゆっくり</span><span class="v' + (hurry ? ' off' : '') + '">' + hm(t.ls) + '</span><span class="k">急ぎ</span><span class="v">' + hm(t.lf) + '</span></div></div>';
+    var dl = '';
     if (b.loop && t.delaySec != null) {
       var mn = Math.round(t.delaySec / 60);
-      h += mn >= 1 ? '<span class="dl late">+' + mn + '分遅れ</span>' : '<span class="dl ontime">定刻</span>';
+      dl = mn >= 1 ? '<span class="dl late">+' + mn + '分遅れ</span>' : '<span class="dl ontime">定刻</span>';
     }
-    h += '</div>';
-    h += '<div class="lv">ゆっくり <b>' + hm(t.ls) + '</b> / 急ぎ <b>' + hm(t.lf) + '</b> に出る</div>';
-    h += '<div class="more">';
-    for (var i = 1; i < trains.length; i++) {
-      var r = trains[i], rh = r.ls <= now;
-      h += '<div class="row"><span class="t">' + timeLabel(r) + '</span>' + typeChip(r) + badge(r) + '<span class="d">' + esc(r.dest) + '</span>' +
-           '<span class="l' + (rh ? ' w' : '') + '">' + (rh ? '急ぎ ' + hm(r.lf) : 'ゆっくり ' + hm(r.ls)) + '</span></div>';
+    h += '<div class="trrow"><div class="tmc"><span class="tm">' + timeLabel(t) + '</span>' + dl + '</div><div>' + typeChip(t, b) + '</div><div>' + destHtml(t, b) + '</div></div></div>';
+    // 3. 未来の便(ちょうど2行。過去の便と同じ4列)
+    h += '<div class="fut">';
+    for (var i = 1; i <= 2; i++) {
+      var r = trains[i];
+      if (!r) { h += '<div class="lrow"><div style="grid-column:1/-1">—</div></div>'; continue; }
+      var rh = r.ls <= now;
+      h += '<div class="lrow"><div><span class="t">' + timeLabel(r) + '</span></div><div>' + typeChip(r, b) + '</div><div>' + destHtml(r, b) + '</div>' +
+           '<div class="c4' + (rh ? ' w' : '') + '"><span>' + (rh ? '急ぎ' : 'ゆっくり') + '</span><b>' + hm(rh ? r.lf : r.ls) + '</b></div></div>';
     }
     return h + '</div></div>';
   }
