@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Desk">
+<meta name="format-detection" content="telephone=no">
+<title>Desk Display</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    /* 白テーマ(昼間の明るい部屋でも読めるよう、文字は黒に近い濃色、背景は白)。
+       警告色は白背景で読めるよう、暗めの橙・赤・緑にしている(暗いテーマ用の明るい色だと白地では薄くて読めないため)。 */
+    --bg:#eef1f5; --panel:#ffffff; --line:#d5dbe4;
+    --text:#10161e; --sub:#566272; --accent:#0b63b8; --warn:#b45309; --bad:#c62828; --ok:#14833f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);
+    font-family:-apple-system,"Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif;
+    overflow:hidden;-webkit-user-select:none;user-select:none}
+  /* 1024x768(iPad mini 4 横向き)を基準サイズにして、画面に合わせて拡大縮小する */
+  #app{display:-webkit-flex;display:flex;width:1024px;height:768px;padding:12px;
+    position:absolute;left:0;top:0;-webkit-transform-origin:0 0;transform-origin:0 0}
+  #rotate{display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:9999;background:var(--bg);
+    -webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;
+    text-align:center;font-size:26px;color:var(--sub);line-height:1.6}
+  #left{width:400px;-webkit-flex:none;flex:none;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+  #right{-webkit-flex:1;flex:1;margin-left:12px;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;min-width:0}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+  .label{font-size:12px;color:var(--sub);letter-spacing:.08em;margin-bottom:6px}
+
+  #clock{text-align:center;padding:12px 10px 10px}
+  #time{font-size:92px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  #time .sec{font-size:34px;color:var(--sub);margin-left:6px;letter-spacing:0}
+  #date{font-size:22px;color:var(--sub);margin-top:8px}
+
+  #weather{margin-top:12px;-webkit-flex:none;flex:none}
+  #now{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+  #nowIcon{font-size:62px;width:84px;text-align:center}
+  #nowTemp{font-size:58px;font-weight:400;line-height:1}
+  #nowTemp small{font-size:22px;color:var(--sub)}
+  #nowText{font-size:18px;margin-top:4px}
+  #nowSub{font-size:14px;color:var(--sub);margin-top:2px}
+  #hours{display:-webkit-flex;display:flex;margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .h{-webkit-flex:1;flex:1;text-align:center}
+  .h .t{font-size:13px;color:var(--sub)}
+  .h .i{font-size:24px;margin:3px 0}
+  .h .c{font-size:16px}
+  .h .p{font-size:12px;color:var(--accent)}
+  #days{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .d{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:3px 0;font-size:16px}
+  .d .n{width:64px;color:var(--sub)}
+  .d .i{width:36px;font-size:20px}
+  .d .p{width:56px;color:var(--accent);font-size:14px}
+  .d .r{-webkit-flex:1;flex:1;text-align:right}
+  .d .r .lo{color:var(--sub);margin-right:10px}
+
+  #radarBox{position:relative;-webkit-flex:none;flex:none;height:270px;padding:0;overflow:hidden}
+  #map{position:absolute;top:0;left:0;right:0;bottom:0;background:#e6ebf1}
+  #radarInfo{position:absolute;z-index:1000;left:10px;top:10px;background:rgba(255,255,255,.92);
+    border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:15px}
+  #radarInfo b{font-variant-numeric:tabular-nums}
+  #radarTag{margin-left:4px;color:var(--sub)}
+  #radarTag.fc{color:var(--warn);font-weight:600}
+  #fcBtn{margin-left:10px;padding:3px 10px;font-size:13px;color:var(--text);background:#eef2f7;
+    border:1px solid #b8c2d0;border-radius:8px;font-family:inherit}
+  #dots{position:absolute;z-index:1000;left:10px;bottom:10px;height:8px;display:-webkit-flex;display:flex}
+  #dots i{display:block;width:14px;height:6px;margin-right:3px;border-radius:3px;background:#c3ccd8}
+  #dots i.fc{background:#e8c27a}
+  #dots i.on{background:var(--accent)}
+  #dots i.fc.on{background:var(--warn)}
+  #fcNote{color:var(--warn);font-size:12px;margin-left:6px}
+  #legend{position:absolute;z-index:1000;right:10px;bottom:24px;background:rgba(255,255,255,.92);
+    border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:11px;color:var(--sub)}
+  #legend span{display:inline-block;width:14px;height:10px;margin-right:2px;vertical-align:middle;border:1px solid rgba(0,0,0,.28)}
+  .leaflet-control-attribution{font-size:9px!important;background:rgba(255,255,255,.8)!important;color:#4b5565!important}
+  .leaflet-control-attribution a{color:#4b5565!important}
+
+  /* 電車パネル(右下、大きめ) */
+  #trainPanel{margin-top:12px;-webkit-flex:1;flex:1;min-height:0;overflow:hidden}
+  #trStatus{margin-left:8px;color:var(--warn);letter-spacing:0}
+  #trStatus.bad{color:var(--bad)}
+  #trStatus.ok{color:var(--ok)}
+  #trStatus.warn{color:var(--warn);font-weight:700}
+  #trMain{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;white-space:nowrap;margin-top:2px}
+  #trCount{font-size:90px;font-weight:400;line-height:1;font-variant-numeric:tabular-nums}
+  #trCount small{font-size:30px;color:var(--sub);margin:0 10px 0 4px}
+  #trMode{font-size:16px;padding-bottom:12px;margin-left:6px}
+  #trInfo{font-size:18px;margin-top:8px;white-space:nowrap;overflow:hidden}
+  #trLeave{display:-webkit-flex;display:flex;margin-top:10px}
+  .lv{-webkit-flex:1;flex:1;background:#f1f4f8;border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:0}
+  .lv + .lv{margin-left:10px}
+  .lv .k{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden}
+  .lv .v{font-size:34px;font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap}
+  #trNext{margin-top:8px;border-top:1px solid var(--line)}
+
+  /* 発車標(駅の案内表示)風の1行: 時刻 / 種別チップ / 行き先の駅ナンバリング / 行き先 / 最終・両数 / 補足 */
+  .bd{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;white-space:nowrap}
+  .bt{font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1}
+  .bt .nx{font-size:.5em;margin-right:2px;color:var(--sub)}
+  .bk{color:#fff;background:#1f5bd6;border-radius:4px;text-align:center;font-weight:700;line-height:1.25;-webkit-flex:none;flex:none}
+  .bk.k2{background:#d9640b}.bk.k3{background:#b3261e}
+  .sb{color:#fff;text-align:center;line-height:1;border-radius:4px;-webkit-flex:none;flex:none;background:#888}
+  .sb i{display:block;font-style:normal;font-weight:700}
+  .sb b{display:block;font-weight:700}
+  .sb.none{background:transparent}
+  .sb.TY{background:#c8205b}.sb.MM{background:#1b3f94}.sb.F{background:#9c5e31}.sb.SO{background:#0b2f6b}
+  .bm{-webkit-flex:1;flex:1;min-width:0}
+  .bdn{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+  .dn{font-weight:700;color:var(--text);line-height:1.1}
+  .dn.w{letter-spacing:.5em;margin-right:-.1em}
+  .bc{color:var(--text);font-weight:600;line-height:1.15;-webkit-flex:none;flex:none}
+  .bc u{display:block;text-decoration:none}
+  .bs{color:var(--sub);overflow:hidden;text-overflow:ellipsis}
+  .bx{-webkit-flex:none;flex:none;color:var(--sub);text-align:right;margin-left:auto;padding-left:8px}
+  .bx b{color:var(--text);font-weight:700}
+
+  /* 大(次の電車): 添付画像と同じく、行き先の下に区切り線と補足 */
+  .bd.lg .bt{font-size:36px;min-width:92px}
+  .bd.lg .bk{font-size:16px;width:86px;padding:3px 0;margin:0 10px 0 6px}
+  .bd.lg .sb{width:34px;padding:3px 0 4px;margin-right:10px}
+  .bd.lg .sb i{font-size:10px}.bd.lg .sb b{font-size:19px}
+  .bd.lg .dn{font-size:32px}
+  .bd.lg .bc{font-size:13px;margin-left:10px}
+  .bd.lg .bs{font-size:14px;border-top:1px solid var(--line);margin-top:3px;padding-top:2px}
+  /* 小(その次の電車): 1行にまとめ、補足は入り切らなければ省略記号で切る */
+  .bd.sm{padding:4px 0;border-top:1px solid var(--line)}
+  .bd.sm:first-child{border-top:0}
+  .bd.sm .bt{font-size:22px;min-width:66px}
+  .bd.sm .bk{font-size:12px;width:62px;padding:2px 0;margin:0 8px 0 4px}
+  .bd.sm .sb{width:24px;padding:2px 0 3px;margin-right:8px}
+  .bd.sm .sb i{font-size:8px}.bd.sm .sb b{font-size:13px}
+  .bd.sm .bm{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center}
+  .bd.sm .dn{font-size:21px}
+  .bd.sm .bc{font-size:12px;margin-left:7px}
+  .bd.sm .bs{font-size:12px;margin-left:9px;-webkit-flex:1;flex:1;min-width:0;white-space:nowrap}
+  .bd.sm .bx{font-size:13px}
+  .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.dim{color:var(--sub)}
+
+  /* 在線状況パネル(左下、天気の下) */
+  #linePanel{margin-top:12px;-webkit-flex:1;flex:1;min-height:0;overflow:hidden}
+  #lnDemo{margin-left:8px;color:var(--warn);letter-spacing:0}
+  #lnDiagram{position:relative;height:84px;margin-top:4px;overflow:hidden}
+  .lnBig{font-size:30px;font-weight:700;line-height:1.3}.lnBig.ok{color:var(--ok)}.lnBig.warn{color:var(--warn)}.lnBig.bad{color:var(--bad)}.lnBig.dim{color:var(--sub)}
+  .lnSub{font-size:14px;color:var(--text);line-height:1.35;max-height:38px;overflow:hidden}
+  #lnLine{position:absolute;left:8%;right:8%;top:42px;height:3px;background:#c3ccd8;border-radius:2px}
+  .lnSt{position:absolute;top:36px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#fff;border:3px solid #8b97a8}
+  .lnSt.me{border-color:var(--accent);background:var(--accent)}
+  .lnNm{position:absolute;top:56px;width:70px;margin-left:-35px;text-align:center;font-size:11px;color:var(--sub)}
+  .lnNm.me{color:var(--text);font-weight:600}
+  .lnTr{position:absolute;top:22px;width:22px;height:11px;margin-left:-11px;border-radius:4px;background:var(--ok)}
+  .lnTr.warn{background:var(--warn)}.lnTr.bad{background:var(--bad)}.lnTr.dim{background:#8b97a8}
+  .lnDl{position:absolute;top:3px;width:48px;margin-left:-24px;text-align:center;font-size:12px}
+  #lnInfo{margin-top:2px;font-size:14px;white-space:nowrap;overflow:hidden}
+  #status{position:absolute;right:16px;bottom:3px;font-size:10px;color:#8b97a8}
+  #credit{position:absolute;left:16px;bottom:3px;font-size:10px;color:#8b97a8}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="left">
+    <div id="clock" class="panel">
+      <div id="time">--:--<span class="sec">--</span></div>
+      <div id="date">&nbsp;</div>
+    </div>
+    <div id="weather" class="panel">
+      <div class="label">新宿区大久保の天気</div>
+      <div id="now">
+        <div id="nowIcon">–</div>
+        <div>
+          <div id="nowTemp">--<small>℃</small></div>
+          <div id="nowText">読み込み中…</div>
+          <div id="nowSub">&nbsp;</div>
+        </div>
+      </div>
+      <div id="hours"></div>
+      <div id="days"></div>
+    </div>
+    <div class="panel" id="linePanel">
+      <div class="label">副都心線 運行情報<span id="lnDemo"></span></div>
+      <div id="lnDiagram"></div>
+      <div id="lnInfo"></div>
+    </div>
+  </div>
+  <div id="right">
+    <div id="radarBox" class="panel">
+      <div id="map"></div>
+      <div id="radarInfo">雨雲レーダー <b id="radarTime">--:--</b><span id="radarTag"></span>
+        <button id="fcBtn" type="button">予測 60分</button><span id="fcNote"></span>
+      </div>
+      <div id="dots"></div>
+      <div id="legend">
+        <span style="background:#f2f2ff"></span>1
+        <span style="background:#a0d2ff"></span>5
+        <span style="background:#2182ff"></span>10
+        <span style="background:#0041ff"></span>20
+        <span style="background:#ffd500"></span>30
+        <span style="background:#ff9900"></span>50
+        <span style="background:#ff2800"></span>80 mm/h
+      </div>
+    </div>
+    <div class="panel" id="trainPanel">
+      <div class="label">西早稲田駅 渋谷方面<span id="trStatus"></span></div>
+      <div id="trMain"><div id="trCount">--</div><div id="trMode"></div></div>
+      <div id="trInfo">読み込み中…</div>
+      <div id="trLeave"></div>
+      <div id="trNext"></div>
+    </div>
+  </div>
+</div>
+<div id="status"></div>
+<div id="credit"></div>
+<div id="rotate"><div>📱 iPadを横向きにしてください<br><span style="font-size:16px">(コントロールセンターで回転ロックをオンにすると固定できます)</span></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  // ---- 設定値 ------------------------------------------------------------
+  // 新宿区大久保付近(大久保駅周辺)の緯度経度。天気予報はこの点の格子値になる。
+  var LAT = 35.7012, LON = 139.7002;
+  // レーダーの拡大率。10なら約71km幅、10.5なら約50km幅、11なら約36km幅(横588px時)。
+  // 10.5の理由: 雨雲は1時間で30〜50kmほど動くことがあり、予測60分分を見るには片側25km程度は欲しいため。
+  // 狭くしたければ11、広くしたければ10にする。気象庁タイルの元データは拡大率10までなので、それより上は拡大表示になる。
+  var RADAR_ZOOM = 10.5;
+  // 天気は10分ごと: 予報は1時間単位で更新されるため、これより短くしても情報が増えない
+  var WEATHER_INTERVAL = 10 * 60 * 1000;
+  // レーダーは5分ごと: 気象庁の降水ナウキャストの観測間隔が5分
+  var RADAR_INTERVAL = 5 * 60 * 1000;
+  // 1時間ごとに全体再読み込み: 2GB RAMの古い端末でメモリ増加を定期的にリセットするため
+  var FULL_RELOAD = 60 * 60 * 1000;
+  // 過去は10分刻みで4コマ(-30,-20,-10,0分)、予測は10分刻み(+10〜+60分)。
+  // 10分刻みにする理由: 5分刻みだとタイルが約2倍(最大19枚分)になり、2GB RAMの古い端末では重いため。
+  // 雲の動きは10分刻みでも十分追える。
+  var PAST_COUNT = 4, PAST_STEP = 2;  // 観測(N1)は5分間隔なので2つ飛ばし=10分
+  var FC_STEP_MIN = 10;               // 予測(N2)は5分間隔データから10分ごとに採用
+  var FRAME_MS = 700;                 // 1コマ0.7秒
+  var NOW_PAUSE = 2000;               // 「いま」のコマで長めに止める(いちばん見たい情報のため)
+  var END_PAUSE = 1500;               // 予測の最終コマでも少し止める
+  var FC_MAX_AGE_MIN = 20;            // 予測の起点が観測の最新より20分以上古ければ使わない(古い予測を出さないため)
+  var N1_URL = 'https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N1.json';
+  var N2_URL = 'https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N2.json';
+  var fcMin = 60;                     // 予測の先読み時間(30 or 60)。ボタンで切り替え
+  try { var sv = localStorage.getItem('fcMin'); if (sv === '30' || sv === '60') { fcMin = +sv; } } catch (e) {}
+
+  var WDAYS = ['日','月','火','水','木','金','土'];
+  function p2(n){ return (n < 10 ? '0' : '') + n; }
+
+  // ---- 時計 ---------------------------------------------------------------
+  function tick() {
+    var d = new Date();
+    document.getElementById('time').innerHTML =
+      p2(d.getHours()) + ':' + p2(d.getMinutes()) + '<span class="sec">' + p2(d.getSeconds()) + '</span>';
+    document.getElementById('date').textContent =
+      d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日(' + WDAYS[d.getDay()] + ')';
+  }
+  tick(); setInterval(tick, 1000);
+
+  // ---- 天気 ---------------------------------------------------------------
+  // WMO天気コード → [絵文字, 日本語]
+  function wx(code) {
+    var m = {
+      0:['☀️','快晴'],1:['🌤️','晴れ'],2:['⛅','薄曇り'],3:['☁️','曇り'],
+      45:['🌫️','霧'],48:['🌫️','霧氷'],
+      51:['🌦️','弱い霧雨'],53:['🌦️','霧雨'],55:['🌧️','強い霧雨'],
+      56:['🌧️','着氷性霧雨'],57:['🌧️','着氷性霧雨'],
+      61:['🌧️','小雨'],63:['🌧️','雨'],65:['🌧️','大雨'],
+      66:['🌧️','着氷性の雨'],67:['🌧️','着氷性の雨'],
+      71:['🌨️','小雪'],73:['🌨️','雪'],75:['❄️','大雪'],77:['🌨️','霧雪'],
+      80:['🌦️','にわか雨'],81:['🌧️','強いにわか雨'],82:['⛈️','激しいにわか雨'],
+      85:['🌨️','にわか雪'],86:['🌨️','強いにわか雪'],
+      95:['⛈️','雷雨'],96:['⛈️','雷雨(ひょう)'],99:['⛈️','激しい雷雨']
+    };
+    return m[code] || ['❔','不明'];
+  }
+
+  function loadWeather() {
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON +
+      '&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m' +
+      '&hourly=temperature_2m,precipitation_probability,weather_code' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&timezone=Asia%2FTokyo&forecast_days=3&wind_speed_unit=ms';
+    fetch(url).then(function (r) { return r.json(); }).then(function (j) {
+      var c = j.current, w = wx(c.weather_code);
+      document.getElementById('nowIcon').textContent = w[0];
+      document.getElementById('nowTemp').innerHTML = Math.round(c.temperature_2m) + '<small>℃</small>';
+      document.getElementById('nowText').textContent = w[1];
+      document.getElementById('nowSub').textContent =
+        '体感 ' + Math.round(c.apparent_temperature) + '℃ ・ 湿度 ' + c.relative_humidity_2m +
+        '% ・ 風 ' + Math.round(c.wind_speed_10m) + 'm/s';
+
+      // 今から先の3時間おき×5コマ
+      var h = j.hourly, now = new Date(), html = '', shown = 0, i, t;
+      for (i = 0; i < h.time.length && shown < 5; i++) {
+        t = new Date(h.time[i]);
+        if (t.getTime() < now.getTime() - 30 * 60 * 1000) continue;
+        if (shown === 0 || (t.getHours() % 3 === 0)) {
+          var hw = wx(h.weather_code[i]);
+          html += '<div class="h"><div class="t">' + t.getHours() + '時</div><div class="i">' + hw[0] +
+                  '</div><div class="c">' + Math.round(h.temperature_2m[i]) + '°</div><div class="p">' +
+                  (h.precipitation_probability[i] == null ? '-' : h.precipitation_probability[i] + '%') + '</div></div>';
+          shown++;
+        }
+      }
+      document.getElementById('hours').innerHTML = html;
+
+      var d = j.daily, dh = '', names = ['今日','明日','明後日'];
+      for (i = 0; i < d.time.length; i++) {
+        var dw = wx(d.weather_code[i]);
+        dh += '<div class="d"><div class="n">' + names[i] + '</div><div class="i">' + dw[0] +
+              '</div><div class="p">' + (d.precipitation_probability_max[i] == null ? '-' : d.precipitation_probability_max[i] + '%') +
+              '</div><div class="r"><span class="lo">' + Math.round(d.temperature_2m_min[i]) + '°</span>' +
+              Math.round(d.temperature_2m_max[i]) + '°</div></div>';
+      }
+      document.getElementById('days').innerHTML = dh;
+      stamp('天気 ' + p2(now.getHours()) + ':' + p2(now.getMinutes()));
+    }).catch(function () { stamp('天気取得失敗'); });
+  }
+  loadWeather(); setInterval(loadWeather, WEATHER_INTERVAL);
+
+  // ---- 電車(西早稲田駅 渋谷方面) -----------------------------------------
+  // 中継サーバー(Cloudflare Worker)のURL。空欄なら時刻表だけの表示。入れると遅延・在線・運行情報を反映し、取れない時は時刻表だけに戻る。
+  var TRAIN_API = 'https://desk-train.akuraahito.workers.dev/fuku';
+  // 30秒ごと: 列車位置は分単位で変わるので十分細かく、Workers無料枠(1日10万回)にも収まる(1日2,880回)
+  var TRAIN_INTERVAL = 30 * 1000;
+  // 研究室から駅(ホーム)までの歩行時間。利用者の申告(2026-11-10更新): 急ぎ7分、ゆっくり10分。
+  var WALK_FAST = 7;      // 分。急いで歩く場合
+  var WALK_SLOW = 10;     // 分。ゆっくり歩く場合
+  var MARGIN_DEFAULT = 2; // 分。車両数が不明な列車は、申告の1〜2分のうち大きい側(安全側)
+  var MARGIN_BY_CARS = { 8: 1, 10: 2 }; // 分。★仮置き。8両/10両のどちらが長く必要か、実際に合わせて直す
+  // 行き先・種別・「直通先での種別(via)」から車両数を判定する表。上から順に、最初に一致したものを採用。空欄の項目は問わない。
+  // via は駅探(東京メトロ・東急の時刻表を載せたサイト)の凡例にある表記: 東急線内各停 / 東急線内急行 / 東急線内通勤特急 /
+  //   東急線内急行・相鉄線内特急 / 東急線内急行・相鉄線内各停。
+  // 根拠: ①相鉄線方面は10両、東横線内で特急になるものは10両、東横線内で各停は8両(利用者の申告 2026-11-10)。
+  //       ②「通勤特急」は特急の一種なので10両と推定(未確認)。 ③「東急線内急行」は申告がなく不明なので登録しない。
+  // ※ 10両の余裕(2分)は「両数不明」の既定値(2分)と同じなので、挙動が変わるのは8両(余裕1分)だけ。
+  var CAR_RULES = [
+    { dest: '湘南台', cars: 10 }, { dest: '海老名', cars: 10 }, { dest: '西谷', cars: 10 },
+    { via: '相鉄線内', cars: 10 },
+    { via: '東急線内各停', cars: 8 },
+    { via: '東急線内通勤特急', cars: 10 }
+  ];
+  var STALE_SEC = 180;    // 3分以上更新がなければ「データが古い」と表示(30秒間隔の6回分失敗した状態)
+  // 表示モード: 'timetable'=時刻表だけ(既定) / 'api'=時刻表+中継サーバーの遅延・在線・運行情報 / 'demo'=?mock=1 の見た目確認用
+  var mode = TRAIN_API ? 'api' : 'timetable';
+  try { if (location.search.indexOf('mock=1') >= 0) { mode = 'demo'; } } catch (e) {}
+  var trData = null;
+
+  function carsFor(t) {
+    var i, r;
+    if (t.cars) { return t.cars; }   // 時刻表の表記(□=8両)があればそれを最優先
+    for (i = 0; i < CAR_RULES.length; i++) {
+      r = CAR_RULES[i];
+      if (r.dest && String(t.dest).indexOf(r.dest) < 0) { continue; }
+      if (r.type && String(t.type).indexOf(r.type) < 0) { continue; }
+      if (r.via && String(t.via || '').indexOf(r.via) < 0) { continue; }
+      return r.cars;
+    }
+    return null;
+  }
+  function carTag(t) { var c = carsFor(t); return c ? c + '両' : '両数不明'; }
+  function marginFor(t) { var c = carsFor(t); return (c && MARGIN_BY_CARS[c] != null) ? MARGIN_BY_CARS[c] : MARGIN_DEFAULT; }
+
+  // デモ用: 約5.5分間隔の架空の列車(実際の時刻表にある 種別×行き先 の組み合わせを回して、表示と車両数判定を試せるようにする)
+  var MOCK_COMBOS = [
+    { type: '各駅停車', sub: '終点まで各駅', dest: '元町・中華街', via: '東急線内各停' },
+    { type: '急行', sub: '', dest: '元町・中華街', via: '東急線内急行' },
+    { type: '急行', sub: '相鉄線内各停', dest: '湘南台', via: '東急線内急行・相鉄線内各停' },
+    { type: '通勤特急', sub: '', dest: '元町・中華街', via: '東急線内通勤特急' },
+    { type: '各駅停車', sub: '終点まで各駅', dest: '横浜', via: '東急線内各停' }
+  ];
+  function mockData() {
+    var now = Date.now(), base = Math.ceil(now / 60000) * 60000 + 2 * 60000, out = [], k, dep, c;
+    for (k = 0; k < 10; k++) {
+      dep = Math.round((base + k * 5.5 * 60000) / 60000) * 60000; c = MOCK_COMBOS[k % MOCK_COMBOS.length];
+      out.push({ depMs: dep, delaySec: (k === 1 ? null : (k % 3) * 60), type: c.type, sub: c.sub, last: (k === 4), dest: c.dest, via: c.via });
+    }
+    var pos = [ { from: 'F10', to: 'F11', delaySec: 60 }, { from: 'F08', to: null, delaySec: 0 },
+                { from: 'F06', to: 'F07', delaySec: null } ];
+    return { fetchedAtMs: now, status: 'ok', statusText: '', trains: out, positions: pos };
+  }
+
+  // ---- 時刻表(東京メトロ公式 西早稲田駅 F11.pdf、渋谷方面) --------------------------------
+  // 出典: https://www.tokyometro.jp/station/timetable/pdf/202609/F11.pdf (2026年3月改正)
+  // 形式: 'HHMM,種別,行先,両数' を ';' でつなぐ。0時台は 24 時台として書く(例 2405)。両数は 8 か 10、不明は空。種別が空欄は渋谷止まりの普通。
+  // 2026年3月改正の時刻表。PDFの表から、種別・行先の小さな文字と、分の数字を囲む枠(□=8両、枠なし=10両)を位置情報で読み取った。
+  // 検算: 平日・土休日とも169本。種別×行先の内訳は駅探の時刻表と平日分が全て一致。16〜18時台は目視でも枠まで一致を確認。
+  var TIMETABLE = {
+    wd: '0511,各,無,8;0529,各,無,8;0538,急,無,10;0551,急,無,8;0557,各,無,8;0604,各,無,8;0613,急,無,10;0620,各,無,8;0631,各,無,8;0639,各,無,8;0643,急特,湘,10;0652,各,無,8;0657,各,無,8;0706,各,無,8;0714,急特,湘,10;0721,各,無,8;0729,通特,無,10;0736,急特,湘,10;0745,各,無,8;0752,各,無,8;0759,各,無,8;0807,各,無,8;0813,各,無,8;0821,各,武,8;0829,各,無,8;0836,各,無,8;0839,各,武,8;0845,各,無,8;0849,各,無,8;0856,各,武,8;0900,急各,湘,10;0907,各,無,8;0913,急,無,8;0920,急各,谷,10;0925,各,無,8;0927,急,無,10;0937,急,武,10;0943,各,無,8;0950,各,無,8;0958,各,無,8;1007,各,武,8;1017,急,無,8;1022,各,無,8;1028,急,無,8;1037,各,無,8;1043,急,無,10;1052,各,無,8;1058,各,無,8;1105,急,武,10;1107,各,無,8;1112,急,無,8;1122,各,無,8;1128,各,無,8;1135,急各,湘,10;1137,各,無,8;1142,急,無,8;1152,各,無,8;1158,各,無,8;1205,急各,湘,10;1207,各,無,8;1212,急,無,8;1222,各,無,8;1228,各,無,8;1235,急各,湘,10;1237,各,無,8;1242,急,無,8;1252,各,無,8;1258,各,無,8;1305,急各,湘,10;1307,各,無,8;1312,急,無,8;1322,各,無,8;1328,各,無,8;1335,急各,湘,10;1337,各,無,8;1342,急,無,10;1352,各,無,8;1358,各,無,8;1405,急各,湘,10;1407,各,無,8;1412,急,無,8;1422,各,無,8;1428,各,無,8;1435,急各,湘,10;1437,各,無,8;1442,急,無,8;1452,各,無,8;1458,各,無,8;1505,急各,湘,10;1507,各,無,8;1512,急,無,8;1522,各,無,8;1528,急,無,8;1535,急各,湘,10;1539,各,無,8;1542,急,無,10;1552,急,無,8;1558,各,無,8;1602,急,無,10;1609,各,無,8;1614,各,無,8;1618,急,無,10;1628,各,無,8;1631,急,無,8;1639,急各,湘,10;1644,急,無,10;1649,各,無,8;1655,急各,谷,10;1658,各,無,8;1702,急,無,10;1712,急特,湘,10;1718,急,無,10;1727,急各,湘,10;1730,各,無,8;1733,急,無,8;1742,急各,湘,10;1748,各,無,8;1758,各,無,8;1803,急,無,8;1812,急特,湘,10;1818,各,武,8;1825,各,無,8;1828,急各,湘,10;1832,急,無,8;1842,急特,湘,10;1848,各,無,8;1857,通特,無,10;1907,急,無,8;1912,急特,湘,10;1918,各,無,8;1927,急各,湘,10;1933,急,無,8;1942,急各,湘,10;1948,各,無,8;1957,急各,湘,10;2002,急,無,8;2013,各,無,8;2018,各,武,8;2027,各,無,8;2033,急,無,10;2041,急各,湘,10;2048,急,武,10;2057,各,無,8;2103,急,無,10;2111,急各,湘,10;2118,各,武,8;2127,各,無,8;2133,急各,湘,10;2142,各,無,8;2148,各,無,8;2157,各,無,8;2203,通特,無,10;2212,各,無,8;2223,急各,湘,10;2228,各,無,8;2237,急,武,10;2243,各,無,8;2248,急特,海,10;2258,各,無,8;2302,通特,無,10;2308,各,武,8;2314,各,無,8;2322,各,菊,8;2331,各,無,8;2339,各,武,8;2348,各,横,8;2356,各,菊,8;2406,各,元,8;2420,,渋,8',
+    hd: '0511,各,無,8;0529,各,無,8;0539,各,無,8;0551,各,無,8;0556,各,無,8;0607,各,無,8;0611,急,無,10;0621,各,無,8;0627,各,無,8;0639,特,無,10;0647,各,無,8;0658,各,無,8;0704,特,無,10;0713,急,無,10;0721,各,無,8;0730,急各,湘,10;0736,各,無,8;0742,急,無,8;0751,各,無,8;0801,急,無,8;0806,急各,湘,10;0809,各,無,8;0812,急,無,8;0821,各,無,8;0827,急,無,8;0836,急各,谷,10;0840,各,無,8;0843,急,無,10;0852,各,無,8;0858,急,無,10;0907,急各,湘,10;0910,各,無,8;0912,急,無,10;0922,各,無,8;0928,急,無,10;0937,急各,湘,10;0943,急,無,10;0951,各,無,8;0954,急,無,8;0957,急各,湘,10;1005,各,無,8;1013,急,無,10;1022,各,無,8;1028,急,無,10;1035,各,無,8;1037,急各,湘,10;1043,急,無,8;1052,各,無,8;1058,各,無,8;1105,急各,湘,10;1107,各,無,8;1113,急,無,8;1122,各,無,8;1128,各,無,8;1135,急各,湘,10;1137,各,無,8;1143,急,無,10;1152,各,無,8;1158,各,無,8;1205,急各,湘,10;1207,各,無,8;1213,急,無,10;1222,各,無,8;1228,各,無,8;1235,急各,湘,10;1237,各,無,8;1243,急,無,10;1252,各,無,8;1258,各,無,8;1305,急各,湘,10;1307,各,無,8;1313,急,無,10;1322,各,無,8;1328,各,無,8;1335,急各,湘,10;1337,各,無,8;1343,急,無,8;1352,各,無,8;1358,各,無,8;1405,急各,湘,10;1407,各,無,8;1413,急,無,8;1422,各,無,8;1428,各,無,8;1435,急各,湘,10;1437,各,無,8;1443,急,無,10;1452,各,無,8;1458,各,無,8;1505,急各,湘,10;1507,各,無,8;1513,急,無,10;1522,各,無,8;1528,各,無,8;1535,急各,湘,10;1537,各,無,8;1543,急,無,10;1552,各,無,8;1558,各,無,8;1605,急各,海,10;1607,各,無,8;1613,急,無,10;1620,各,無,8;1625,各,無,8;1628,急,無,8;1636,各,無,8;1643,急,無,8;1649,急各,湘,10;1652,各,無,8;1658,急,無,10;1707,各,無,8;1713,急,無,8;1720,急各,湘,10;1723,各,無,8;1728,急,無,10;1739,各,無,8;1743,急各,湘,10;1752,各,無,8;1755,各,無,8;1802,急,無,8;1807,各,無,8;1813,急,無,10;1821,急特,海,10;1823,各,無,8;1828,急,無,10;1836,各,菊,8;1839,急各,湘,10;1846,急,無,10;1852,各,無,8;1858,各,無,8;1903,急特,海,10;1913,各,無,8;1921,急,無,10;1924,各,無,8;1929,各,無,8;1933,急各,湘,10;1943,各,無,8;1951,各,無,8;2003,各,無,8;2013,各,無,8;2020,急,無,10;2025,急各,湘,10;2028,各,無,8;2036,急,武,8;2043,各,無,8;2052,急,無,10;2058,各,無,8;2103,急,武,10;2111,各,無,8;2122,各,無,8;2131,急各,湘,10;2142,各,無,8;2153,各,無,8;2206,各,無,8;2212,急特,海,10;2222,各,無,8;2227,急,無,10;2236,各,無,8;2243,急,無,10;2255,急,武,10;2301,各,無,8;2311,特,横,10;2320,急特,海,10;2328,各,無,8;2336,各,菊,8;2345,各,横,8;2354,各,菊,8;2404,各,元,8;2420,,渋,8'
+  };   // wd=平日、hd=土曜・休日
+  // 凡例(PDFより): 種別
+  var TT_VIA = { '各': '東急線内各停', '急': '東急線内急行', '急各': '東急線内急行・相鉄線内各停',
+                 '急特': '東急線内急行・相鉄線内特急', '通特': '東急線内通勤特急', '特': '東急線内特急' };
+  // パネルに出す短い呼び名
+  var TT_LABEL = { '各': '各駅停車', '急': '急行', '急各': '急行', '急特': '急行', '通特': '通勤特急', '特': '特急' };
+  // 発車標の補足欄。各駅停車は添付画像の「終点まで各駅」。相鉄線内の種別はPDF凡例の記載をそのまま使う。
+  // それ以外(急行・通勤特急・特急)の補足は、書式が分からないので出さない(推測で書かない)。
+  var TT_SUB = { '各': '終点まで各駅', '急各': '相鉄線内各停', '急特': '相鉄線内特急' };
+  // 凡例(PDFより): 行先(無印=元町・中華街)
+  var TT_DEST = { '無': '元町・中華街', '海': '海老名', '湘': '湘南台', '谷': '西谷', '横': '横浜',
+                  '菊': '菊名', '元': '元住吉', '武': '武蔵小杉', '渋': '渋谷' };
+  // 祝日(土日以外で休日ダイヤになる日)。内閣府「国民の祝日」(www8.cao.go.jp/chosei/shukujitsu/gaiyou.html)で2026-11-10に照合済み。
+  // 2027年末以降は未登録なので、年が替わる前に追記が必要。
+  var HOLIDAYS = ['2026-11-23', '2027-01-01', '2027-01-11', '2027-02-11', '2027-02-23', '2027-03-22',
+                  '2027-04-29', '2027-05-03', '2027-05-04', '2027-05-05', '2027-07-19', '2027-08-11',
+                  '2027-09-20', '2027-09-23', '2027-10-11', '2027-11-03', '2027-11-23'];
+
+  function parseTT(str) {
+    var out = [], recs = str ? str.split(';') : [], i, f, hh, mm;
+    for (i = 0; i < recs.length; i++) {
+      f = recs[i].split(',');
+      if (f.length < 3 || !f[0]) { continue; }
+      hh = +f[0].substr(0, 2); mm = +f[0].substr(2, 2);
+      out.push({ min: hh * 60 + mm, via: TT_VIA[f[1]] || f[1], label: TT_LABEL[f[1]] || f[1] || '普通', sub: TT_SUB[f[1]] || '',
+                 dest: TT_DEST[f[2]] || f[2], cars: f[3] ? +f[3] : 0 });
+    }
+    return out;
+  }
+  var TT_PARSED = { wd: parseTT(TIMETABLE.wd), hd: parseTT(TIMETABLE.hd) };
+
+  function ymd(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function isHolidayDate(d) { var w = d.getDay(); return w === 0 || w === 6 || HOLIDAYS.indexOf(ymd(d)) >= 0; }
+
+  // 「今から先」の列車を、時刻表から作る。
+  // 運行日は朝4時で切り替える: 0時台の列車は前日のダイヤに属するため(始発は5時台、終電は0時台)。
+  // リアルタイム情報(中継サーバー)。取れていれば遅延・在線・運行情報を反映する。
+  // STALE_SEC(3分)以上更新が途絶えたら使わず、時刻表だけの表示に戻る(古い遅延を出し続けないため)。
+  var apiData = null;
+  function apiFresh(now) { return !!apiData && (now - apiData.fetchedAtMs) / 1000 <= STALE_SEC; }
+  function loadApi() {
+    fetch(TRAIN_API).then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+      .then(function (j) {
+        var delays = { wd: {}, hd: {} }, list = j.delays || [], i, x;
+        for (i = 0; i < list.length; i++) { x = list[i]; if (delays[x.cal]) { delays[x.cal][x.min] = Math.max(0, +x.delaySec || 0); } }
+        apiData = { fetchedAtMs: Date.now(), delays: delays, status: j.status || 'ok', statusText: j.statusText || '',
+                    stations: j.stations || null, positions: j.positions || [] };
+        var n = new Date(); stamp('運行情報 ' + p2(n.getHours()) + ':' + p2(n.getMinutes()));
+      }).catch(function () { stamp('運行情報の取得失敗'); });
+  }
+
+  // 時刻表から「今から先」の列車を作る。リアルタイム情報があれば、同じ日種別・同じ出発時刻の列車に遅延を付ける。
+  // 運行日は朝4時で切り替える: 0時台の列車は前日のダイヤに属するため(始発は5時台、終電は0時台)。
+  function timetableData() {
+    var now = Date.now(), api = apiFresh(now) ? apiData : null, sd = new Date(now - 4 * 3600 * 1000), out = [], k, d, list, base, i, e, hol, cal, dl;
+    for (k = 0; k < 2; k++) {               // 当日分と翌運行日分(終電後に始発を出すため)
+      d = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate() + k);
+      hol = isHolidayDate(d); list = hol ? TT_PARSED.hd : TT_PARSED.wd; cal = hol ? 'hd' : 'wd';
+      base = d.getTime();
+      // 「最終」: その運行日の中で、その行き先の最後の列車(添付画像の「横浜 最終」の読み方。行き先ごとの最終と解釈)
+      var lastOf = {};
+      for (i = 0; i < list.length; i++) { lastOf[list[i].dest] = i; }
+      for (i = 0; i < list.length; i++) {
+        e = list[i];
+        dl = api ? api.delays[cal][e.min] : null;
+        out.push({ depMs: base + e.min * 60000, delaySec: (dl == null ? null : dl), nd: !api, type: e.label, sub: e.sub,
+                   last: lastOf[e.dest] === i, dest: e.dest, via: e.via, cars: e.cars });
+      }
+    }
+    // 遅れている列車は、予定時刻を過ぎていても実際の出発はまだ先なので残す
+    out = out.filter(function (t) { return t.depMs + (t.delaySec || 0) * 1000 > now; })
+             .sort(function (a, b) { return a.depMs - b.depMs; }).slice(0, 16);
+    return { fetchedAtMs: api ? api.fetchedAtMs : now, status: api ? api.status : 'ok', statusText: api ? api.statusText : '',
+             trains: out, positions: api ? api.positions : [], stations: api ? api.stations : null, source: api ? 'api' : 'timetable' };
+  }
+
+  function loadTrains() {
+    if (mode === 'demo') { trData = mockData(); return; }
+    if (mode === 'api') { loadApi(); }
+  }
+  function currentData() { return (mode === 'demo') ? trData : timetableData(); }
+
+  // 翌日の時刻には「翌」を付ける(終電後に翌朝の始発を出す時、当日の電車と見間違えないため)
+  function hhmmD(ms, now) { return (new Date(ms).getDate() !== new Date(now).getDate() ? '翌' : '') + hhmm(ms); }
+  // 発車標と同じ「0:10」「23:57」の形(時は0埋めしない)
+  function hhmm(ms) { var d = new Date(ms); return d.getHours() + ':' + p2(d.getMinutes()); }
+  function mmss(ms) {
+    var m = Math.floor(ms / 60000);
+    // 1時間以上先(終電後など)は「3時間11分」の形にする: 分が3桁になると枠からあふれるため
+    if (m >= 60) { return Math.floor(m / 60) + '<small>時間</small>' + p2(m % 60) + '<small>分</small>'; }
+    return m + '<small>分</small>' + p2(Math.floor((ms % 60000) / 1000)) + '<small>秒</small>';
+  }
+  function delayText(t, strong) {
+    if (t.nd) { return ''; }          // 時刻表だけの表示では遅延情報を持たない(「遅延情報なし」と出すと誤解を招くため非表示)
+    // まだ走り出していない先の列車は遅延情報が無いのが普通なので、いちばん上の列車でだけ「情報なし」と出す
+    if (t.delaySec == null) { return ''; }
+    var m = Math.round(t.delaySec / 60);
+    return m > 0 ? '<span class="warn">+' + m + '分遅れ</span>' : '<span class="ok">定刻</span>';
+  }
+
+  // 在線状況: 小竹向原〜西早稲田の6駅。池袋側から西早稲田へ向かってくる渋谷方面行きの列車だけを描く。
+  // 駅コードは副都心線の F06〜F11(私の記憶に基づく。実データで確認する)。
+  var STATIONS = [['F06','小竹向原'],['F07','千川'],['F08','要町'],['F09','池袋'],['F10','雑司が谷'],['F11','西早稲田']];
+  function stIdx(code) { for (var i = 0; i < STATIONS.length; i++) { if (STATIONS[i][0] === code) { return i; } } return -1; }
+
+  // 左下: 運行情報(遅延・見合わせ)。列車の位置(在線)は公開データがないため扱わない。
+  function renderLine(d) {
+    var live = (d.source === 'api'), cls, big, sub;
+    if (mode === 'demo') { cls = 'ok'; big = '平常運転'; sub = 'デモ表示'; }
+    else if (!live) { cls = 'dim'; big = '取得できません'; sub = mode === 'api' ? '運行情報を取得できないため、時刻表どおりの表示です' : '運行情報は未接続です(時刻表どおりの表示)'; }
+    else if (d.status === 'suspended') { cls = 'bad'; big = '運転見合わせ'; sub = d.statusText; }
+    else if (d.status === 'delay') { cls = 'warn'; big = '遅れが出ています'; sub = d.statusText; }
+    else { cls = 'ok'; big = '平常運転'; sub = d.statusText || ''; }
+    document.getElementById('lnDiagram').innerHTML = '<div class="lnBig ' + cls + '">' + big + '</div><div class="lnSub">' + sub + '</div>';
+    document.getElementById('lnDemo').textContent = '';
+    var f = new Date(d.fetchedAtMs);
+    document.getElementById('lnInfo').innerHTML = (live || mode === 'demo') ? '<span class="dim">' + p2(f.getHours()) + ':' + p2(f.getMinutes()) + ' 時点 / 列車ごとの遅れは反映されません</span>' : '';
+  }
+
+  // 行き先の駅ナンバリング(発車標の「TY 21」のバッジ)。TY=東急東横線 MM=みなとみらい線 SO=相鉄線 F=副都心線
+  // 出典: 横浜TY21・武蔵小杉TY11は添付画像、渋谷F16は時刻表PDFの表紙、相鉄(西谷SO08・海老名SO18・湘南台SO37)は路線図サイト。
+  // 元住吉TY12・菊名TY16・元町・中華街MM06は私の記憶(TY11〜TY21の間の駅数が合うことは確認)。
+  var BADGE = { '横浜': ['TY', '21'], '武蔵小杉': ['TY', '11'], '元住吉': ['TY', '12'], '菊名': ['TY', '16'],
+                '元町・中華街': ['MM', '06'], '渋谷': ['F', '16'], '湘南台': ['SO', '37'], '海老名': ['SO', '18'], '西谷': ['SO', '08'] };
+  function boardRow(t, size, now, extra) {
+    var b = BADGE[t.dest], nextDay = new Date(t.depMs).getDate() !== new Date(now).getDate(), c = carsFor(t);
+    var kc = String(t.type).indexOf('特急') >= 0 ? ' k3' : (String(t.type).indexOf('急行') >= 0 ? ' k2' : '');
+    var sub = (delayText(t, size === 'lg') + ' ' + (t.sub || '')).replace(/^\s+|\s+$/g, '');
+    return '<div class="bd ' + size + '">' +
+      '<div class="bt">' + (nextDay ? '<span class="nx">翌</span>' : '') + hhmm(t.depMs) + '</div>' +
+      '<div class="bk' + kc + '">' + t.type + '</div>' +
+      (b ? '<div class="sb ' + b[0] + '"><i>' + b[0] + '</i><b>' + b[1] + '</b></div>' : '<div class="sb none"></div>') +
+      '<div class="bm"><div class="bdn"><span class="dn' + (t.dest.length === 2 ? ' w' : '') + '">' + t.dest + '</span>' +
+      '<span class="bc">' + (t.last ? '<u>最終</u>' : '') + (c ? c + '両' : '') + '</span>' +
+      (size === 'sm' && sub ? '<span class="bs">' + sub + '</span>' : '') + '</div>' +
+      (size === 'lg' && sub ? '<div class="bs">' + sub + '</div>' : '') + '</div>' +
+      (extra ? '<div class="bx">' + extra + '</div>' : '') + '</div>';
+  }
+
+  function leaveBox(title, ms, now, cls) {
+    var past = ms <= now;
+    return '<div class="lv"><div class="k">' + title + '</div><div class="v ' + (past ? 'dim' : cls) + '">' +
+           (past ? '過ぎた' : hhmmD(Math.floor(ms / 60000) * 60000, now) + ' <span style="font-size:16px">に出る</span>') + '</div></div>';
+  }
+
+  function renderTrain() {
+    var now = Date.now(), el = function (id) { return document.getElementById(id); };
+    var st = el('trStatus'), i, list = [], t, rd, m, d = currentData();
+    if (!d) { el('trInfo').textContent = '読み込み中…'; return; }
+    renderLine(d);
+    if (mode === 'timetable' && !TT_PARSED.wd.length) {
+      el('trCount').textContent = '--'; el('trMode').textContent = ''; el('trLeave').innerHTML = ''; el('trNext').innerHTML = '';
+      el('trInfo').innerHTML = '<span class="bad">時刻表データが未登録です</span>'; return;
+    }
+    st.className = '';
+    if (mode === 'demo') { st.textContent = ' デモデータ(実データではありません)'; }
+    else if (mode === 'timetable') { st.textContent = ' 時刻表ベース'; }
+    else if (d.source !== 'api') { st.className = 'bad'; st.textContent = ' ⚠ 運行情報を取得できず・時刻表ベース'; }
+    else if (d.status === 'delay') { st.className = 'warn'; st.textContent = ' ⚠ 遅れあり: 表示は時刻表どおり、実際は遅れる場合があります'; }
+    else { st.className = 'ok'; st.textContent = ' 時刻表+運行情報'; }
+    el('credit').textContent = '天気: Open-Meteo' + (mode === 'api' ? ' ・ 電車: 公共交通オープンデータセンター' : '');
+    if (d.status === 'suspended') {
+      st.className = 'bad'; st.textContent = ' ⚠ 運転見合わせ中';
+      el('trCount').textContent = '--'; el('trMode').textContent = '';
+      el('trInfo').innerHTML = '<span class="bad">' + d.statusText + '</span>'; el('trLeave').innerHTML = ''; el('trNext').innerHTML = ''; return;
+    }
+    for (i = 0; i < d.trains.length; i++) {
+      t = d.trains[i]; rd = t.depMs + (t.delaySec || 0) * 1000; m = marginFor(t);
+      var lf = rd - (WALK_FAST + m) * 60000, ls = rd - (WALK_SLOW + m) * 60000;
+      if (lf <= now) { continue; }              // 急いでも間に合わない電車は表示しない
+      list.push({ t: t, rd: rd, lf: lf, ls: ls, m: m });
+      if (list.length >= 5) { break; }          // 大きく1本+その次の4本
+    }
+    if (!list.length) {
+      el('trCount').textContent = '--'; el('trMode').textContent = '';
+      el('trInfo').textContent = '間に合う電車がありません'; el('trLeave').innerHTML = ''; el('trNext').innerHTML = ''; return;
+    }
+    var a = list[0], slowOk = a.ls > now, rem = slowOk ? a.ls - now : a.lf - now;
+    var cls = !slowOk ? 'bad' : (rem <= 3 * 60000 ? 'warn' : 'ok');
+    el('trCount').className = cls; el('trCount').innerHTML = mmss(rem);
+    el('trMode').className = cls; el('trMode').textContent = slowOk ? 'で出発(ゆっくり歩いて間に合う)' : 'で出発(急げば間に合う)';
+    el('trInfo').innerHTML = boardRow(a.t, 'lg', now, '');
+    el('trLeave').innerHTML =
+      leaveBox('ゆっくり(歩き' + WALK_SLOW + '分+余裕' + a.m + '分・' + carTag(a.t) + ')', a.ls, now, 'ok') +
+      leaveBox('急ぎ(歩き' + WALK_FAST + '分+余裕' + a.m + '分・' + carTag(a.t) + ')', a.lf, now, 'warn');
+    var nx = '';
+    for (i = 1; i < list.length; i++) {
+      nx += boardRow(list[i].t, 'sm', now, 'ゆっくり <b>' + hhmmD(Math.floor(list[i].ls / 60000) * 60000, now) + '</b> に出る');
+    }
+    el('trNext').innerHTML = nx;
+  }
+  loadTrains(); renderTrain();
+  setInterval(loadTrains, TRAIN_INTERVAL);
+  setInterval(renderTrain, 1000);
+
+  // ---- 共通 ---------------------------------------------------------------
+  function stamp(s) { document.getElementById('status').textContent = s; }
+  setTimeout(function () { location.reload(); }, FULL_RELOAD);
+
+  // ---- 画面フィット(横向き固定レイアウトを拡大縮小。縦向きなら案内を出す) ------
+  function fit() {
+    var w = window.innerWidth, h = window.innerHeight, sc = Math.min(w / 1024, h / 768);
+    var app = document.getElementById('app');
+    app.style.transform = 'scale(' + sc + ')';
+    app.style.left = ((w - 1024 * sc) / 2) + 'px';
+    app.style.top = ((h - 768 * sc) / 2) + 'px';
+    document.getElementById('rotate').style.display = (h > w) ? 'flex' : 'none';
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
+  fit();
+
+  // ---- 雨雲レーダー(最後に初期化: 地図ライブラリが読み込めなくても他の表示は動かすため) ----
+  var map = L.map('map', { zoomControl: false, attributionControl: true, dragging: false,
+    touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false,
+    tap: false, zoomSnap: 0.5 }).setView([LAT, LON], RADAR_ZOOM);
+  // 地図は国土地理院の淡色地図。レーダーの色が見やすい薄い背景のため
+  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+    maxZoom: 18, attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>'
+  }).addTo(map);
+  L.circleMarker([LAT, LON], { radius: 6, color: '#fff', weight: 2, fillColor: '#e5322d', fillOpacity: 1 }).addTo(map);
+  map.attributionControl.addAttribution('雨雲: <a href="https://www.jma.go.jp/">気象庁</a>');
+
+  var layers = [], specs = [], cur = 0, animTimer = null, lastN1 = null, lastN2 = null;
+
+  function toMs(s) { // 'YYYYMMDDHHMMSS'(UTC) → ミリ秒
+    return Date.UTC(+s.substr(0,4), +s.substr(4,2) - 1, +s.substr(6,2), +s.substr(8,2), +s.substr(10,2));
+  }
+  function jst(s) { // → JSTの'HH:MM'
+    var j = new Date(toMs(s) + 9 * 3600 * 1000);
+    return p2(j.getUTCHours()) + ':' + p2(j.getUTCMinutes());
+  }
+  function minDiff(a, b) { return Math.round((toMs(a) - toMs(b)) / 60000); }
+  function tileUrl(b, v) {
+    return 'https://www.jma.go.jp/bosai/jmatile/data/nowc/' + b + '/none/' + v + '/surf/hrpns/{z}/{x}/{y}.png';
+  }
+  function getJson(u) {
+    return fetch(u).then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); });
+  }
+
+  function loadRadar() {
+    var p1 = getJson(N1_URL);
+    var p2_ = getJson(N2_URL).catch(function () { return null; }); // 予測が取れなくても観測は出す
+    Promise.all([p1, p2_]).then(function (res) {
+      lastN1 = res[0]; lastN2 = res[1]; buildFrames();
+      var n = new Date(); stamp('レーダー ' + p2(n.getHours()) + ':' + p2(n.getMinutes()));
+    }).catch(function () { stamp('レーダー取得失敗'); });
+  }
+
+  function buildFrames() {
+    var i, e, m, note = '';
+    if (!lastN1 || !lastN1.length) { return; }
+    var latest = lastN1[0].basetime;            // N1は先頭が最新
+    specs = [];
+    for (i = PAST_COUNT - 1; i >= 0; i--) {     // 古い順に並べる
+      e = lastN1[i * PAST_STEP];
+      if (e) { specs.push({ b: e.basetime, v: e.validtime, fc: false, hold: 0 }); }
+    }
+    if (specs.length) { specs[specs.length - 1].hold = NOW_PAUSE; specs[specs.length - 1].tag = '(いま)'; }
+
+    if (lastN2 && lastN2.length) {
+      var maxB = '';
+      for (i = 0; i < lastN2.length; i++) { if (lastN2[i].basetime > maxB) { maxB = lastN2[i].basetime; } }
+      if (maxB && minDiff(latest, maxB) <= FC_MAX_AGE_MIN) {
+        for (m = FC_STEP_MIN; m <= fcMin; m += FC_STEP_MIN) {
+          for (i = 0; i < lastN2.length; i++) {
+            e = lastN2[i];
+            if (e.basetime === maxB && minDiff(e.validtime, maxB) === m) {
+              specs.push({ b: e.basetime, v: e.validtime, fc: true, hold: 0, tag: '+' + minDiff(e.validtime, latest) + '分の予測' });
+              break;
+            }
+          }
+        }
+        if (specs[specs.length - 1].fc) { specs[specs.length - 1].hold = END_PAUSE; }
+      } else { note = '予測は更新待ち'; }
+    } else { note = '予測を取得できません'; }
+    document.getElementById('fcNote').textContent = note;
+
+    if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+    for (i = 0; i < layers.length; i++) { map.removeLayer(layers[i]); }
+    layers = [];
+    var dots = '';
+    for (i = 0; i < specs.length; i++) {
+      var lyr = L.tileLayer(tileUrl(specs[i].b, specs[i].v), { opacity: 0, maxNativeZoom: 10, maxZoom: 18, zIndex: 10 + i });
+      lyr.addTo(map); layers.push(lyr);
+      dots += '<i class="' + (specs[i].fc ? 'fc' : '') + '"></i>';
+    }
+    document.getElementById('dots').innerHTML = dots;
+    cur = 0;
+    for (i = 0; i < specs.length; i++) { if (specs[i].tag === '(いま)') { cur = i; } }
+    show(cur); schedule();
+  }
+
+  function show(k) {
+    var i, d = document.getElementById('dots').children;
+    for (i = 0; i < layers.length; i++) {
+      layers[i].setOpacity(i === k ? 0.75 : 0);
+      if (d[i]) { d[i].className = (specs[i].fc ? 'fc' : '') + (i === k ? ' on' : ''); }
+    }
+    var tg = document.getElementById('radarTag');
+    document.getElementById('radarTime').textContent = specs[k] ? jst(specs[k].v) : '--:--';
+    tg.textContent = specs[k] && specs[k].tag ? specs[k].tag : '';
+    tg.className = specs[k] && specs[k].fc ? 'fc' : '';
+  }
+  function schedule() {
+    if (!layers.length) { return; }
+    animTimer = setTimeout(function () {
+      cur = (cur + 1) % layers.length; show(cur); schedule();
+    }, specs[cur].hold || FRAME_MS);
+  }
+
+  var btn = document.getElementById('fcBtn');
+  function btnLabel() { btn.textContent = '予測 ' + fcMin + '分'; }
+  btnLabel();
+  btn.addEventListener('click', function () {
+    fcMin = (fcMin === 60) ? 30 : 60;
+    try { localStorage.setItem('fcMin', String(fcMin)); } catch (e) {}
+    btnLabel(); buildFrames();
+  });
+  loadRadar(); setInterval(loadRadar, RADAR_INTERVAL);
+
+})();
+</script>
+</body>
+</html>
