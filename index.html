@@ -82,6 +82,8 @@
   #trainPanel{margin-top:12px;-webkit-flex:1;flex:1;min-height:0;overflow:hidden}
   #trStatus{margin-left:8px;color:var(--warn);letter-spacing:0}
   #trStatus.bad{color:var(--bad)}
+  #trStatus.ok{color:var(--ok)}
+  #trStatus.warn{color:var(--warn);font-weight:700}
   #trMain{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;white-space:nowrap;margin-top:2px}
   #trCount{font-size:90px;font-weight:400;line-height:1;font-variant-numeric:tabular-nums}
   #trCount small{font-size:30px;color:var(--sub);margin:0 10px 0 4px}
@@ -140,7 +142,9 @@
   /* 在線状況パネル(左下、天気の下) */
   #linePanel{margin-top:12px;-webkit-flex:1;flex:1;min-height:0;overflow:hidden}
   #lnDemo{margin-left:8px;color:var(--warn);letter-spacing:0}
-  #lnDiagram{position:relative;height:84px;margin-top:4px}
+  #lnDiagram{position:relative;height:84px;margin-top:4px;overflow:hidden}
+  .lnBig{font-size:30px;font-weight:700;line-height:1.3}.lnBig.ok{color:var(--ok)}.lnBig.warn{color:var(--warn)}.lnBig.bad{color:var(--bad)}.lnBig.dim{color:var(--sub)}
+  .lnSub{font-size:14px;color:var(--text);line-height:1.35;max-height:38px;overflow:hidden}
   #lnLine{position:absolute;left:8%;right:8%;top:42px;height:3px;background:#c3ccd8;border-radius:2px}
   .lnSt{position:absolute;top:36px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#fff;border:3px solid #8b97a8}
   .lnSt.me{border-color:var(--accent);background:var(--accent)}
@@ -151,6 +155,7 @@
   .lnDl{position:absolute;top:3px;width:48px;margin-left:-24px;text-align:center;font-size:12px}
   #lnInfo{margin-top:2px;font-size:14px;white-space:nowrap;overflow:hidden}
   #status{position:absolute;right:16px;bottom:3px;font-size:10px;color:#8b97a8}
+  #credit{position:absolute;left:16px;bottom:3px;font-size:10px;color:#8b97a8}
 </style>
 </head>
 <body>
@@ -174,7 +179,7 @@
       <div id="days"></div>
     </div>
     <div class="panel" id="linePanel">
-      <div class="label">副都心線 在線状況(渋谷方面行き)<span id="lnDemo"></span></div>
+      <div class="label">副都心線 運行情報<span id="lnDemo"></span></div>
       <div id="lnDiagram"></div>
       <div id="lnInfo"></div>
     </div>
@@ -206,6 +211,7 @@
   </div>
 </div>
 <div id="status"></div>
+<div id="credit"></div>
 <div id="rotate"><div>📱 iPadを横向きにしてください<br><span style="font-size:16px">(コントロールセンターで回転ロックをオンにすると固定できます)</span></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -314,8 +320,8 @@
   loadWeather(); setInterval(loadWeather, WEATHER_INTERVAL);
 
   // ---- 電車(西早稲田駅 渋谷方面) -----------------------------------------
-  // 中継サーバー(Cloudflare Worker)のURL。空欄の間はデモデータを表示する(実データではない)。
-  var TRAIN_API = '';
+  // 中継サーバー(Cloudflare Worker)のURL。空欄なら時刻表だけの表示。入れると遅延・在線・運行情報を反映し、取れない時は時刻表だけに戻る。
+  var TRAIN_API = 'https://desk-train.akuraahito.workers.dev/fuku';
   // 30秒ごと: 列車位置は分単位で変わるので十分細かく、Workers無料枠(1日10万回)にも収まる(1日2,880回)
   var TRAIN_INTERVAL = 30 * 1000;
   // 研究室から駅(ホーム)までの歩行時間。利用者の申告(2026-11-10更新): 急ぎ7分、ゆっくり10分。
@@ -336,7 +342,7 @@
     { via: '東急線内通勤特急', cars: 10 }
   ];
   var STALE_SEC = 180;    // 3分以上更新がなければ「データが古い」と表示(30秒間隔の6回分失敗した状態)
-  // データの出どころ: 'timetable'=公式時刻表(既定、遅延は反映されない) / 'api'=中継サーバー(遅延・在線あり) / 'demo'=?mock=1 の見た目確認用
+  // 表示モード: 'timetable'=時刻表だけ(既定) / 'api'=時刻表+中継サーバーの遅延・在線・運行情報 / 'demo'=?mock=1 の見た目確認用
   var mode = TRAIN_API ? 'api' : 'timetable';
   try { if (location.search.indexOf('mock=1') >= 0) { mode = 'demo'; } } catch (e) {}
   var trData = null;
@@ -419,39 +425,51 @@
 
   // 「今から先」の列車を、時刻表から作る。
   // 運行日は朝4時で切り替える: 0時台の列車は前日のダイヤに属するため(始発は5時台、終電は0時台)。
+  // リアルタイム情報(中継サーバー)。取れていれば遅延・在線・運行情報を反映する。
+  // STALE_SEC(3分)以上更新が途絶えたら使わず、時刻表だけの表示に戻る(古い遅延を出し続けないため)。
+  var apiData = null;
+  function apiFresh(now) { return !!apiData && (now - apiData.fetchedAtMs) / 1000 <= STALE_SEC; }
+  function loadApi() {
+    fetch(TRAIN_API).then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+      .then(function (j) {
+        var delays = { wd: {}, hd: {} }, list = j.delays || [], i, x;
+        for (i = 0; i < list.length; i++) { x = list[i]; if (delays[x.cal]) { delays[x.cal][x.min] = Math.max(0, +x.delaySec || 0); } }
+        apiData = { fetchedAtMs: Date.now(), delays: delays, status: j.status || 'ok', statusText: j.statusText || '',
+                    stations: j.stations || null, positions: j.positions || [] };
+        var n = new Date(); stamp('運行情報 ' + p2(n.getHours()) + ':' + p2(n.getMinutes()));
+      }).catch(function () { stamp('運行情報の取得失敗'); });
+  }
+
+  // 時刻表から「今から先」の列車を作る。リアルタイム情報があれば、同じ日種別・同じ出発時刻の列車に遅延を付ける。
+  // 運行日は朝4時で切り替える: 0時台の列車は前日のダイヤに属するため(始発は5時台、終電は0時台)。
   function timetableData() {
-    var now = Date.now(), sd = new Date(now - 4 * 3600 * 1000), out = [], k, d, list, base, i, e;
+    var now = Date.now(), api = apiFresh(now) ? apiData : null, sd = new Date(now - 4 * 3600 * 1000), out = [], k, d, list, base, i, e, hol, cal, dl;
     for (k = 0; k < 2; k++) {               // 当日分と翌運行日分(終電後に始発を出すため)
       d = new Date(sd.getFullYear(), sd.getMonth(), sd.getDate() + k);
-      list = isHolidayDate(d) ? TT_PARSED.hd : TT_PARSED.wd;
+      hol = isHolidayDate(d); list = hol ? TT_PARSED.hd : TT_PARSED.wd; cal = hol ? 'hd' : 'wd';
       base = d.getTime();
       // 「最終」: その運行日の中で、その行き先の最後の列車(添付画像の「横浜 最終」の読み方。行き先ごとの最終と解釈)
       var lastOf = {};
       for (i = 0; i < list.length; i++) { lastOf[list[i].dest] = i; }
       for (i = 0; i < list.length; i++) {
         e = list[i];
-        out.push({ depMs: base + e.min * 60000, delaySec: null, nd: true, type: e.label, sub: e.sub, last: lastOf[e.dest] === i,
-                   dest: e.dest, via: e.via, cars: e.cars });
+        dl = api ? api.delays[cal][e.min] : null;
+        out.push({ depMs: base + e.min * 60000, delaySec: (dl == null ? null : dl), nd: !api, type: e.label, sub: e.sub,
+                   last: lastOf[e.dest] === i, dest: e.dest, via: e.via, cars: e.cars });
       }
     }
-    out = out.filter(function (t) { return t.depMs > now; }).sort(function (a, b) { return a.depMs - b.depMs; }).slice(0, 16);
-    return { fetchedAtMs: now, status: 'ok', statusText: '', trains: out, positions: [], source: 'timetable' };
+    // 遅れている列車は、予定時刻を過ぎていても実際の出発はまだ先なので残す
+    out = out.filter(function (t) { return t.depMs + (t.delaySec || 0) * 1000 > now; })
+             .sort(function (a, b) { return a.depMs - b.depMs; }).slice(0, 16);
+    return { fetchedAtMs: api ? api.fetchedAtMs : now, status: api ? api.status : 'ok', statusText: api ? api.statusText : '',
+             trains: out, positions: api ? api.positions : [], stations: api ? api.stations : null, source: api ? 'api' : 'timetable' };
   }
 
   function loadTrains() {
     if (mode === 'demo') { trData = mockData(); return; }
-    if (mode === 'timetable') { trData = timetableData(); return; }
-    fetch(TRAIN_API).then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
-      .then(function (j) {
-        var t = [], i;
-        for (i = 0; i < j.trains.length; i++) {
-          t.push({ depMs: Date.parse(j.trains[i].dep), delaySec: j.trains[i].delaySec,
-                   type: j.trains[i].type, dest: j.trains[i].dest, via: j.trains[i].via || '',
-                   sub: j.trains[i].sub || '', last: !!j.trains[i].last });
-        }
-        trData = { fetchedAtMs: Date.now(), status: j.status, statusText: j.statusText || '', trains: t, positions: j.positions || [] };
-      }).catch(function () { stamp('電車データ取得失敗'); });
+    if (mode === 'api') { loadApi(); }
   }
+  function currentData() { return (mode === 'demo') ? trData : timetableData(); }
 
   // 翌日の時刻には「翌」を付ける(終電後に翌朝の始発を出す時、当日の電車と見間違えないため)
   function hhmmD(ms, now) { return (new Date(ms).getDate() !== new Date(now).getDate() ? '翌' : '') + hhmm(ms); }
@@ -463,9 +481,10 @@
     if (m >= 60) { return Math.floor(m / 60) + '<small>時間</small>' + p2(m % 60) + '<small>分</small>'; }
     return m + '<small>分</small>' + p2(Math.floor((ms % 60000) / 1000)) + '<small>秒</small>';
   }
-  function delayText(t) {
-    if (t.nd) { return ''; }          // 時刻表ベースの列車は遅延情報を持たない(「遅延情報なし」と出すと誤解を招くため非表示)
-    if (t.delaySec == null) { return '<span class="dim">遅延情報なし</span>'; }
+  function delayText(t, strong) {
+    if (t.nd) { return ''; }          // 時刻表だけの表示では遅延情報を持たない(「遅延情報なし」と出すと誤解を招くため非表示)
+    // まだ走り出していない先の列車は遅延情報が無いのが普通なので、いちばん上の列車でだけ「情報なし」と出す
+    if (t.delaySec == null) { return ''; }
     var m = Math.round(t.delaySec / 60);
     return m > 0 ? '<span class="warn">+' + m + '分遅れ</span>' : '<span class="ok">定刻</span>';
   }
@@ -475,36 +494,18 @@
   var STATIONS = [['F06','小竹向原'],['F07','千川'],['F08','要町'],['F09','池袋'],['F10','雑司が谷'],['F11','西早稲田']];
   function stIdx(code) { for (var i = 0; i < STATIONS.length; i++) { if (STATIONS[i][0] === code) { return i; } } return -1; }
 
+  // 左下: 運行情報(遅延・見合わせ)。列車の位置(在線)は公開データがないため扱わない。
   function renderLine(d) {
-    var n = STATIONS.length - 1, html = '<div id="lnLine"></div>', i, p, a, b, x, cls, cnt = 0, me;
-    function pos(v) { return (8 + v * 84 / n).toFixed(2) + '%'; }
-    for (i = 0; i <= n; i++) {
-      me = (i === n) ? ' me' : '';
-      html += '<div class="lnSt' + me + '" style="left:' + pos(i) + '"></div>' +
-              '<div class="lnNm' + me + '" style="left:' + pos(i) + '">' + STATIONS[i][1] + '</div>';
-    }
-    var ps = d.positions || [];
-    for (i = 0; i < ps.length; i++) {
-      p = ps[i]; a = stIdx(p.from);
-      if (a < 0) { continue; }
-      if (p.to) { b = stIdx(p.to); if (b !== a + 1) { continue; } x = a + 0.5; } else { x = a; }
-      // 色: 遅延情報なし=灰、5分以上=赤、2分以上=橙、それ以外=緑(2分は「遅れ」と感じ始める目安として設定)
-      cls = (p.delaySec == null) ? 'dim' : (p.delaySec >= 300 ? 'bad' : (p.delaySec >= 120 ? 'warn' : ''));
-      html += '<div class="lnTr ' + cls + '" style="left:' + pos(x) + '"></div>';
-      if (p.delaySec != null && p.delaySec >= 60) {
-        html += '<div class="lnDl ' + cls + '" style="left:' + pos(x) + '">+' + Math.round(p.delaySec / 60) + '分</div>';
-      }
-      cnt++;
-    }
-    document.getElementById('lnDiagram').innerHTML = html;
-    document.getElementById('lnDemo').textContent = (mode === 'demo') ? ' デモ' : (mode === 'timetable' ? ' 時刻表ベース' : '');
-    var info;
-    if (d.status === 'suspended') { info = '<span class="bad">' + d.statusText + '</span>'; }
-    else if (d.status === 'delay') { info = '<span class="warn">' + (d.statusText || '遅延が発生しています') + '</span>'; }
-    else { info = '<span class="ok">平常運転</span>' + (d.statusText ? ' <span class="dim">' + d.statusText + '</span>' : ''); }
-    document.getElementById('lnInfo').innerHTML = (mode === 'timetable')
-      ? '<span class="dim">在線・遅延のリアルタイム情報は未接続です</span>'
-      : info + ' <span class="dim">/ 西早稲田へ向かう列車 ' + cnt + '本</span>';
+    var live = (d.source === 'api'), cls, big, sub;
+    if (mode === 'demo') { cls = 'ok'; big = '平常運転'; sub = 'デモ表示'; }
+    else if (!live) { cls = 'dim'; big = '取得できません'; sub = mode === 'api' ? '運行情報を取得できないため、時刻表どおりの表示です' : '運行情報は未接続です(時刻表どおりの表示)'; }
+    else if (d.status === 'suspended') { cls = 'bad'; big = '運転見合わせ'; sub = d.statusText; }
+    else if (d.status === 'delay') { cls = 'warn'; big = '遅れが出ています'; sub = d.statusText; }
+    else { cls = 'ok'; big = '平常運転'; sub = d.statusText || ''; }
+    document.getElementById('lnDiagram').innerHTML = '<div class="lnBig ' + cls + '">' + big + '</div><div class="lnSub">' + sub + '</div>';
+    document.getElementById('lnDemo').textContent = '';
+    var f = new Date(d.fetchedAtMs);
+    document.getElementById('lnInfo').innerHTML = (live || mode === 'demo') ? '<span class="dim">' + p2(f.getHours()) + ':' + p2(f.getMinutes()) + ' 時点 / 列車ごとの遅れは反映されません</span>' : '';
   }
 
   // 行き先の駅ナンバリング(発車標の「TY 21」のバッジ)。TY=東急東横線 MM=みなとみらい線 SO=相鉄線 F=副都心線
@@ -515,7 +516,7 @@
   function boardRow(t, size, now, extra) {
     var b = BADGE[t.dest], nextDay = new Date(t.depMs).getDate() !== new Date(now).getDate(), c = carsFor(t);
     var kc = String(t.type).indexOf('特急') >= 0 ? ' k3' : (String(t.type).indexOf('急行') >= 0 ? ' k2' : '');
-    var sub = (delayText(t) + ' ' + (t.sub || '')).replace(/^\s+|\s+$/g, '');
+    var sub = (delayText(t, size === 'lg') + ' ' + (t.sub || '')).replace(/^\s+|\s+$/g, '');
     return '<div class="bd ' + size + '">' +
       '<div class="bt">' + (nextDay ? '<span class="nx">翌</span>' : '') + hhmm(t.depMs) + '</div>' +
       '<div class="bk' + kc + '">' + t.type + '</div>' +
@@ -535,18 +536,22 @@
 
   function renderTrain() {
     var now = Date.now(), el = function (id) { return document.getElementById(id); };
-    var st = el('trStatus'), i, list = [], t, rd, m, d = trData;
+    var st = el('trStatus'), i, list = [], t, rd, m, d = currentData();
     if (!d) { el('trInfo').textContent = '読み込み中…'; return; }
     renderLine(d);
     if (mode === 'timetable' && !TT_PARSED.wd.length) {
       el('trCount').textContent = '--'; el('trMode').textContent = ''; el('trLeave').innerHTML = ''; el('trNext').innerHTML = '';
       el('trInfo').innerHTML = '<span class="bad">時刻表データが未登録です</span>'; return;
     }
-    st.className = ''; st.textContent = (mode === 'demo') ? ' デモデータ(実データではありません)' : (mode === 'timetable' ? ' 時刻表ベース(遅延は反映されません)' : '');
-    var age = (now - d.fetchedAtMs) / 1000;
-    if (mode === 'api' && age > STALE_SEC) { st.className = 'bad'; st.textContent = ' ⚠ データが古い(' + Math.floor(age / 60) + '分前)'; }
+    st.className = '';
+    if (mode === 'demo') { st.textContent = ' デモデータ(実データではありません)'; }
+    else if (mode === 'timetable') { st.textContent = ' 時刻表ベース'; }
+    else if (d.source !== 'api') { st.className = 'bad'; st.textContent = ' ⚠ 運行情報を取得できず・時刻表ベース'; }
+    else if (d.status === 'delay') { st.className = 'warn'; st.textContent = ' ⚠ 遅れあり: 表示は時刻表どおり、実際は遅れる場合があります'; }
+    else { st.className = 'ok'; st.textContent = ' 時刻表+運行情報'; }
+    el('credit').textContent = '天気: Open-Meteo' + (mode === 'api' ? ' ・ 電車: 公共交通オープンデータセンター' : '');
     if (d.status === 'suspended') {
-      st.className = 'bad'; st.textContent = ' 運行情報あり';
+      st.className = 'bad'; st.textContent = ' ⚠ 運転見合わせ中';
       el('trCount').textContent = '--'; el('trMode').textContent = '';
       el('trInfo').innerHTML = '<span class="bad">' + d.statusText + '</span>'; el('trLeave').innerHTML = ''; el('trNext').innerHTML = ''; return;
     }
